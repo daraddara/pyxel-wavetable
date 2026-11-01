@@ -9,12 +9,10 @@ import pyxel_wavetable as wt
 class App:
     def __init__(self):
         pyxel.init(256, 80, title="Wavetable: Custom Function")
-        tone = wt.from_function(
+        tone_index = wt.add_tone(wt.from_function(
             lambda p: math.sin(p) + 0.4 * math.sin(2*p) + 0.2 * math.sin(5*p)
-        )
-        pyxel.tones.append(tone)
-        pyxel.sounds[0].set("c2 d2 e2 g2 a2 g2 e2 d2", "0", "7", "n", 12)
-        pyxel.sounds[0].tones[:] = [len(pyxel.tones) - 1]
+        ))
+        pyxel.sounds[0].set("c2 d2 e2 g2 a2 g2 e2 d2", str(tone_index), "7", "n", 12)
         pyxel.play(0, 0, loop=True)
         pyxel.run(self.update, self.draw)
 

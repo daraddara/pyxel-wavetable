@@ -7,12 +7,11 @@ import pyxel_wavetable as wt
 class App:
     def __init__(self):
         pyxel.init(256, 80, title="Wavetable: Music Compare")
-        tones = [wt.bell(), wt.bass(), wt.lead(), wt.organ(), wt.soft()]
-        pyxel.tones.extend(tones)
-        first_tone = len(pyxel.tones) - len(tones)
-        for i in range(len(tones)):
-            pyxel.sounds[i].set("c2 d2 e2 g2 a2 g2 e2 d2", "0", "7", "n", 12)
-            pyxel.sounds[i].tones[:] = [first_tone + i]
+        tone_indices = wt.add_tones([
+            wt.bell(), wt.bass(), wt.lead(), wt.organ(), wt.soft(),
+        ])
+        for i, tone_index in enumerate(tone_indices):
+            pyxel.sounds[i].set("c2 d2 e2 g2 a2 g2 e2 d2", str(tone_index), "7", "n", 12)
         # All sequencing and looping belongs to ordinary Pyxel Music.
         pyxel.musics[0].set([0, 1, 2, 3, 4], [], [], [])
         pyxel.playm(0, loop=True)

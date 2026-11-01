@@ -8,6 +8,10 @@
 pyxel_wavetable
     ↓
 pyxel.Tone生成
+    ↓（必要に応じて明示的に呼出し）
+add_tone / add_tones
+    ↓
+Tone index取得
 
 ここまでが責務
 ------------------------
@@ -25,9 +29,14 @@ playm
 
 - `generators.py`: 入力検証、1周期の生成、正規化、量子化、Tone生成。全経路を `from_samples()` に集約する。
 - `presets.py`: generatorを呼ぶ5つの小さな静的音色。独自の生成アルゴリズムを持たない。
-- `__init__.py`: generator、プリセット、デフォルト定数を公開する。
+- `registration.py`: Toneを `pyxel.tones` の末尾へ登録し、通常のindexを返す。
+- `__init__.py`: generator、プリセット、登録API、デフォルト定数を公開する。
 
-標準ライブラリとPyxelだけで実装する。各呼出しは独立した新しいToneを返し、Pyxelのグローバルスロットに触れない。Tone生成に `pyxel.init()` は不要。スロットへの登録・Sound設定・再生時は利用アプリがPyxelを初期化する。
+標準ライブラリとPyxelだけで実装する。generatorの各呼出しは独立した新しいToneを返し、Pyxelのグローバルスロットに触れない。Tone生成に `pyxel.init()` は不要。登録APIは初期化済みの `pyxel.tones` にだけ作用し、Sound設定や再生は行わない。スロットへの登録・Sound設定・再生時は利用アプリがPyxelを初期化する。
+
+`add_tone(tone)` は現在の長さをindexとして取得し、末尾に追加して `int` を返す。`add_tones(tones)` はiterableを一度list化して入力順に追加し、連続したindexのtupleを返す。空入力は `()` で、既存Toneを変更しない。上書き・削除・名前解決・ToneRef・ToneBankは導入しない。登録先の変更を複数スレッドから同時に行う仕組みは対象外。
+
+返されたindexは既存Pyxel APIに直接渡す。Pyxel 2.9.9のSound文字列は各文字を個別のTone番号として解釈するため、`Sound.set(..., str(index), ...)` は0〜9に限る。複数桁のindexはMMLの `@{index}` で利用できる。例では新しく初期化したPyxelの標準4 Toneの後に追加し、4〜8の範囲を使う。`sound.tones[:]` による後付け設定は使わない。
 
 gainは `Tone.gain` にだけ設定する。サンプルに焼き込むとTone側でも掛かって二重に減衰するため、正規化・量子化から分離する。波形は浮動小数で処理し、最後にunsigned整数へ変換する。全点0は中点へ量子化する。DC除去・補間・再サンプリングは行わない。
 

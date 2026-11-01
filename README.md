@@ -1,6 +1,6 @@
 # pyxel-wavetable
 
-数式・パラメータ・波形サンプルから、通常の `pyxel.Tone` を生成する小さなPythonユーティリティです。Pyxel本体やRustコードは変更しません。生成後の発音と再生は、既存の `Sound` / `Music` / MML / `play()` / `playm()` に任せます。
+数式・パラメータ・波形サンプルから、通常の `pyxel.Tone` を生成し、必要に応じて `pyxel.tones` に登録する小さなPythonユーティリティです。Pyxel本体やRustコードは変更しません。生成後の発音と再生は、既存の `Sound` / `Music` / MML / `play()` / `playm()` に任せます。
 
 ## インストール
 
@@ -22,9 +22,8 @@ import pyxel_wavetable as wt
 
 pyxel.init(160, 80, title="Wavetable demo")
 
-# 初期Toneスロットは0〜3なので、4番を使う前に追加する。
-pyxel.tones.append(wt.pm(ratio=3, index=1.8))
-pyxel.sounds[0].set("c1 d1 e1 g1", "4", "7", "n", 12)
+pm = wt.add_tone(wt.pm(ratio=3, index=1.8))
+pyxel.sounds[0].set("c1 d1 e1 g1", str(pm), "7", "n", 12)
 pyxel.play(0, 0, loop=True)
 
 def draw():
@@ -34,7 +33,56 @@ def draw():
 pyxel.run(lambda: None, draw)
 ```
 
-ここで `update()` に音源処理を追加する必要はありません。ライブラリ自身はPyxelの初期化・スロット登録・再生を行わず、新しいToneを返すだけです。既存アプリでは、用途に合わせてToneを追加するか、既存スロットに代入してください。
+ここで `update()` に音源処理を追加する必要はありません。generatorは新しいToneを返し、`add_tone()` / `add_tones()` は明示的に呼ばれた場合だけ末尾へ登録します。Pyxelの初期化・Sound設定・再生は利用アプリが行います。
+
+## Toneの登録
+
+`pyxel.init()` の後で登録します。既存のToneを上書き・置換せず、常に末尾へ追加します。戻り値は通常のTone indexで、独自の参照型や再生APIはありません。
+
+### 単体登録
+
+```python
+pm = wt.add_tone(wt.pm(ratio=3, index=1.8))
+```
+
+シグネチャは `add_tone(tone: pyxel.Tone) -> int` です。`pm` は `pyxel.tones` 内のindexです。標準の4 Toneだけが存在すれば4を返し、`pyxel.tones[pm]` で参照できます。
+
+### 複数登録
+
+```python
+sine, saw, pm = wt.add_tones([
+    wt.sine(),
+    wt.saw(),
+    wt.pm(),
+])
+```
+
+シグネチャは `add_tones(tones: Iterable[pyxel.Tone]) -> tuple[int, ...]` です。入力順のindexをtupleで返します。標準の4 Toneから開始すれば `(4, 5, 6)` です。list以外にgeneratorも使えます。
+
+```python
+indices = wt.add_tones(wt.sine() for _ in range(3))
+assert wt.add_tones([]) == ()  # 登録状態は変わらない
+```
+
+### Soundで利用
+
+```python
+sound = pyxel.sounds[0]
+sound.set("c2 d2 e2 g2", str(pm), "7", "n", 12)
+# 既存Soundの音色だけを変更する場合
+sound.set_tones(str(pm))
+```
+
+Pyxel 2.9.9の `Sound.set()` / `set_tones()` の文字列は、1文字につき1つのToneを指定します。上記の `str(index)` はindexが0〜9の場合に使えます。10以上では、例えば `"12"` はTone 1・2の列になるため、複数桁のindexをそのまま指定できるMMLを使ってください。登録API自体はindexを9までに制限しません。
+
+### MMLで利用
+
+```python
+mml = f"@{pm} O3 C D E G"
+pyxel.play(0, mml, loop=True)
+```
+
+通常のPyxel MMLの `@<tone index>` をそのまま使います。Sound / Music / MMLのラッパーや `Sound.set()` 専用ヘルパーは提供しません。
 
 ## 公開API
 
@@ -59,7 +107,7 @@ wt.organ()
 wt.soft()
 ```
 
-すべて通常の `pyxel.Tone` を返します。
+上記のgenerator・プリセットはすべて通常の `pyxel.Tone` を返します。登録APIの戻り値は前述の `int` / `tuple[int, ...]` です。
 
 | API | 引数・波形 |
 | --- | --- |
@@ -111,7 +159,7 @@ PoCでは、32/64点の複雑なPM波形に高周波的な粗さがあり、128�
 .\.venv\Scripts\python.exe examples/custom_wave.py
 ```
 
-- `basic_tones.py`: 1〜5でSINE / SAW / PULSE / HARMONICS / PMを選択。同じメロディを再生。SPACEで停止。
+- `basic_tones.py`: `add_tones()` で登録し、返されたindexを `Sound.set()` に直接渡す。1〜5でSINE / SAW / PULSE（duty=0.125）/ HARMONICS / PMを選択。同じメロディを再生。SPACEで停止。
 - `melody_compare.py`: BELL → BASS → LEAD → ORGAN → SOFTで同じメロディを順次再生。通常の `Music` がループ全体を管理。SPACEで再開、Sで停止。
 - `custom_wave.py`: `sin(p) + 0.4*sin(2p) + 0.2*sin(5p)` を一度だけ生成。SPACEで再開、Sで停止。
 

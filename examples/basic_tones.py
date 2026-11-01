@@ -10,15 +10,12 @@ class App:
     def __init__(self):
         pyxel.init(240, 112, title="Wavetable: Basic Tones")
         self.names = ["SINE", "SAW", "PULSE", "HARMONICS", "PM"]
-        tones = [wt.sine(), wt.saw(), wt.pulse(0.25),
-                 wt.harmonics([1, 0.5, 0.25, 0.1]), wt.pm()]
-        # Extend first: Pyxel starts with only four Tone slots (0-3).
-        pyxel.tones.extend(tones)
-        self.first_tone = len(pyxel.tones) - len(tones)
-        for i in range(5):
-            sound = pyxel.sounds[i]
-            sound.set(MELODY, "0", "7", "n", 12)
-            sound.tones[:] = [self.first_tone + i]
+        tone_indices = wt.add_tones([
+            wt.sine(), wt.saw(), wt.pulse(0.125),
+            wt.harmonics([1, 0.5, 0.25, 0.1]), wt.pm(),
+        ])
+        for i, tone_index in enumerate(tone_indices):
+            pyxel.sounds[i].set(MELODY, str(tone_index), "7", "n", 12)
         self.selected = 0
         pyxel.play(0, 0, loop=True)
         pyxel.run(self.update, self.draw)
