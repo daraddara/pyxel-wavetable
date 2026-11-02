@@ -96,6 +96,8 @@ def test_parameter_steps_and_limits():
 def editor():
     app = lab["App"].__new__(lab["App"])
     app.settings = ToneSettings()
+    app.preset_definitions = lab["_preset_definitions"]()
+    app.preset_cursor = 0
     app.preview = Preview()
     app.focus, app.editing = "tone", False
     app.cursor, app.view_start, app.selected_all = 0, 0, False
@@ -213,3 +215,83 @@ def test_space_in_mml_editor_does_not_toggle(editor, monkeypatch):
     monkeypatch.setattr(app, "edit_mml", lambda: events.append("edit"))
     app.update()
     assert events == ["edit"]
+
+
+@pytest.mark.parametrize("definition", lab["_preset_definitions"](), ids=lambda d: d.name)
+def test_preset_expands_to_editable_generator(definition):
+    settings = ToneSettings.from_preset(definition)
+    assert settings.preset_name == definition.name
+    assert settings.generator == definition.generator
+    assert settings.gain == definition.gain
+    assert len(settings.amplitudes) == 8
+    tone = settings.generate()
+    original = getattr(wt, definition.name)()
+    assert list(tone.wavetable) == list(original.wavetable)
+    assert tone.gain == original.gain
+    if definition.generator == "harmonics":
+        assert settings.amplitudes == list(definition.amplitudes) + [0.0]*(8-len(definition.amplitudes))
+    assert f"wt.{definition.generator}(" in settings.code()
+    assert f"wt.{definition.name}(" not in settings.code()
+
+
+def test_specific_preset_values():
+    definitions = {d.name: d for d in lab["_preset_definitions"]()}
+    bell = ToneSettings.from_preset(definitions["bell"])
+    lead = ToneSettings.from_preset(definitions["lead"])
+    cowbell = ToneSettings.from_preset(definitions["cowbell"])
+    bass = ToneSettings.from_preset(definitions["bass"])
+    assert (bell.ratio, bell.index) == (5, 1.6)
+    assert (lead.ratio, lead.index) == (2, 1.2)
+    assert (cowbell.ratio, cowbell.index, cowbell.gain) == (3, 1.7, .4)
+    assert bass.amplitudes == [1, .4, .15, 0, 0, 0, 0, 0]
+
+
+@pytest.mark.parametrize("preset,parameter,direction", [
+    ("bell", "generator", 1), ("bell", "size", 1), ("bell", "sample_bits", 1),
+    ("bell", "gain", 1), ("bell", "ratio", 1), ("bell", "index", 1), ("bass", "H1", -1),
+])
+def test_tone_edits_mark_custom(preset, parameter, direction):
+    definition = next(d for d in lab["_preset_definitions"]() if d.name == preset)
+    settings = ToneSettings.from_preset(definition)
+    settings.adjust(parameter, direction)
+    assert settings.preset_name is None
+
+
+def test_reloading_preset_and_non_tone_edits(editor, monkeypatch):
+    app, _ = editor
+    app.preset_cursor = next(i for i, d in enumerate(app.preset_definitions) if d.name == "cowbell")
+    monkeypatch.setattr(app, "regenerate", lambda: None)
+    monkeypatch.setattr(lab["pyxel"], "play_pos", lambda ch: None)
+    app.load_preset()
+    assert app.settings.preset_name == "cowbell"
+    app.focus_mml()
+    app.selected_all = True
+    app.insert_mml("T120 O3 C E G")
+    app.cycle_preview()
+    app.preview.loop = False
+    app.preview.auto_tone = False
+    assert app.settings.preset_name == "cowbell"
+    app.settings.adjust("index", 1)
+    assert app.settings.preset_name is None
+    app.load_preset()
+    assert app.settings.preset_name == "cowbell"
+    assert (app.settings.ratio, app.settings.index, app.settings.gain) == (3, 1.7, .4)
+    assert app.preview.custom == "T120 O3 C E G"
+    assert app.preview.loop is False
+    assert app.preview.auto_tone is False
+
+
+def test_editing_harmonics_does_not_mutate_definition():
+    definition = next(d for d in lab["_preset_definitions"]() if d.name == "bass")
+    first, second = ToneSettings.from_preset(definition), ToneSettings.from_preset(definition)
+    first.adjust("H2", 1)
+    assert second.amplitudes[1] == definition.amplitudes[1] == .4
+
+
+def test_pulse_edit_and_no_op_limit():
+    settings = ToneSettings(generator="pulse", preset_name="example")
+    settings.adjust("duty", 1)
+    assert settings.preset_name is None
+    settings = ToneSettings(ratio=1, preset_name="example")
+    settings.adjust("ratio", -1)
+    assert settings.preset_name == "example"

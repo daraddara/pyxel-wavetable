@@ -28,7 +28,7 @@ playm
 ## モジュール
 
 - `generators.py`: 入力検証、1周期の生成、正規化、量子化、Tone生成。全経路を `from_samples()` に集約する。
-- `presets.py`: generatorを呼ぶ10個の小さな静的音色。うち5個はパーカッション系。独自の生成アルゴリズムを持たない。
+- `presets.py`: generatorを呼ぶ10個の小さな静的音色。うち5個はパーカッション系。不変の内部定義 `_PresetDefinition` と読み取り専用レジストリで、音色値・既定gain・カテゴリを一元管理する。公開関数は同じ定義で生成し、既存のシグネチャ・既定値・結果を維持する。独自の生成アルゴリズムを持たない。
 - `registration.py`: Toneを `pyxel.tones` の末尾へ登録し、通常のindexを返す。
 - `__init__.py`: generator、プリセット、登録API、デフォルト定数を公開する。
 
@@ -64,6 +64,18 @@ gainは `Tone.gain` にだけ設定する。サンプルに焼き込むとTone�
 ## 意図的に実装しないもの
 
 Tone Lab（`examples/tone_lab.py`）はexample/UI層で、ライブラリ本体のAPIや依存には含めない。`ToneSettings` は既存generatorへの引数と表示コードを組み立て、`Preview` は既存MMLを選んでPyxelへ渡すだけとする。ユーザーのコードやMMLをevalせず、MMLの解析・発音タイミングはPyxelに任せる。
+
+Tone Labは内部一覧取得用の `_preset_definitions()` を参照する。名前や数値をUI側に複製せず、生成済みToneも逆解析しない。カテゴリは表示用のtonal/percussionで、パッケージの公開APIには追加しない。
+
+```text
+不変のPreset定義
+    ├─ 公開Preset関数10種 → pyxel.Tone
+    └─ Tone Labの一覧 → LOAD → 独立したToneSettings
+                                   ↓
+                           通常のgenerator → 編集用Tone
+```
+
+LOADは定義を新しい編集状態へコピーし、Harmonicsの不足分だけ0で埋める。定義の倍音はtuple、編集側は独立したlistなので、編集で元の定義を変えない。Presetの選択カーソルと読み込み済みの名前は分け、LOAD後だけ名前を表示する。通常のパラメータ増減で実際の生成コードが変わったら名前を外してCustomとする。MML・Preview・Loop・Use Current Toneは音色生成条件ではないため名前を維持する。再LOADで元の値へ戻り、試聴設定やTone indexは保持する。コード表示は常に展開したgenerator設定を使う。対応generatorのPresetを定義へ追加すれば、Tone Labの一覧には個別の追加コードなしで現れる。
 
 PキーでPreviewを切り替えるとき、再生中なら既存再生を停止して新しいPreviewを先頭から即再生する。停止中なら選択だけを変える。CUSTOMが不正なら停止状態でエラーを表示し、以前のループを残さない。ループ・Use Current Toneは現在の設定を使う。
 

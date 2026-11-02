@@ -197,11 +197,18 @@ PoCでは、32/64点の複雑なPM波形に高周波的な粗さがあり、128�
 python examples/tone_lab.py
 ```
 
-左側のTONEで設定を調整し、右側のWAVEFORMで1周期の形状、CODEでそのまま利用できる生成コードを確認できます。下側にはPREVIEW、MML入力欄、再生状態・エラーと操作説明を表示します。プリセット選択画面ではなく、generatorのパラメータを直接編集するツールです。
+上側のPRESETで音作りの出発点を読み込み、左側のTONEで設定を調整します。右側のWAVEFORMで1周期の形状、CODEでそのまま利用できる生成コードを確認できます。下側にはPREVIEW、MML入力欄、再生状態・エラーと操作説明を表示します。
+
+`presets.py` の全10種を、共通の定義から一覧表示します。TonalはBell / Bass / Lead / Organ / Soft、PercussionはTom / Woodblock / Cowbell / Metallic / Clickです。PRESET欄の `<` / `>` ボタンまたは `[` / `]` キーで選び、LOADボタンまたはEnterで読み込みます。MML編集中のEnterは引き続き試聴用です。
+
+読み込み時にはgenerator・共通パラメータ・PM設定または倍音値を編集状態へ展開し、短い倍音配列は8要素まで0で埋めます。Presetは固定の再生モードではなく、自由に変更できる初期値です。`Editing: Bell` などの表示は、音色生成に関係する値を変更すると `Editing: Custom` になります。範囲端で値が変わらなかった操作や、MML編集・Preview切替・Loop・Use Current Toneの切替では変わりません。
+
+同じPresetをLOADし直せば元の定義値に戻ります。MMLやPreview、Loopの設定は保持し、Toneスロットも追加しません。生成コードは `wt.bell()` ではなく、展開後の `wt.pm(...)` / `wt.harmonics(...)` を表示・コピーします。値を調整し、CUSTOM MMLで自分のフレーズを試してから、そのコードを自分のプログラムへ持ち帰れます。
 
 | 操作（MML編集中を除く） | キー |
 | --- | --- |
 | パラメータの選択・増減 | ↑↓で項目選択、←→で変更 |
+| Presetの選択・読込 | `<` / `>` ボタンまたは `[` / `]` キーで選択、LOAD / Enterで読込 |
 | Preview切替 | P：melody → bass → short → custom。再生中は新しいPreviewを先頭から即再生、停止中は選択のみ |
 | 現在ToneをMML先頭に自動付加 | A：Use Current Tone ON/OFF |
 | ループ切替 | L |
