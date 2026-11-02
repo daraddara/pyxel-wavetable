@@ -65,6 +65,8 @@ gainは `Tone.gain` にだけ設定する。サンプルに焼き込むとTone�
 
 Tone Lab（`examples/tone_lab.py`）はexample/UI層で、ライブラリ本体のAPIや依存には含めない。`ToneSettings` は既存generatorへの引数と表示コードを組み立て、`Preview` は既存MMLを選んでPyxelへ渡すだけとする。ユーザーのコードやMMLをevalせず、MMLの解析・発音タイミングはPyxelに任せる。
 
+描画は論理座標568×424から物理座標1136×848へ2倍に変換する。文字は同梱のRoboto Mono MediumをPyxelのFont APIで16pxとして直接描画し、複数行の行間を20pxとする。文字幅はフォントから取得して、ボタンの中央揃え、MMLの表示文字数・カーソル・選択範囲へ共通で使う。マウス座標は論理座標へ戻して判定する。フォントパスはこのexampleのファイル位置を基準に解決し、作業ディレクトリやOSフォントには依存しない。
+
 Tone Labは内部一覧取得用の `_preset_definitions()` を参照する。名前や数値をUI側に複製せず、生成済みToneも逆解析しない。カテゴリは表示用のtonal/percussionで、パッケージの公開APIには追加しない。
 
 ```text

@@ -199,6 +199,8 @@ python examples/tone_lab.py
 
 上側のPRESETで音作りの出発点を読み込み、左側のTONEで設定を調整します。右側のWAVEFORMで1周期の形状、CODEでそのまま利用できる生成コードを確認できます。下側にはPREVIEW、MML入力欄、再生状態・エラーと操作説明を表示します。
 
+文字は同梱のRoboto Mono Mediumを16pxで描画します。従来の小さなビットマップ文字の拡大から、1136×848の描画領域へ直接描く方式に変更し、文字の解像度と行間を増やしました。OSにフォントをインストールする必要はありません。配布元とフォント固有のライセンスは [examples/assets/fonts/README.md](examples/assets/fonts/README.md) に記載しています。
+
 `presets.py` の全10種を、共通の定義から一覧表示します。TonalはBell / Bass / Lead / Organ / Soft、PercussionはTom / Woodblock / Cowbell / Metallic / Clickです。PRESET欄の `<` / `>` ボタンまたは `[` / `]` キーで選び、LOADボタンまたはEnterで読み込みます。MML編集中のEnterは引き続き試聴用です。
 
 読み込み時にはgenerator・共通パラメータ・PM設定または倍音値を編集状態へ展開し、短い倍音配列は8要素まで0で埋めます。Presetは固定の再生モードではなく、自由に変更できる初期値です。`Editing: Bell` などの表示は、音色生成に関係する値を変更すると `Editing: Custom` になります。範囲端で値が変わらなかった操作や、MML編集・Preview切替・Loop・Use Current Toneの切替では変わりません。

@@ -1,6 +1,7 @@
 """Tone editor; all sequencing and MML belong to Pyxel."""
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import pyxel
 import pyxel_wavetable as wt
@@ -28,6 +29,22 @@ MML_PASTE = (WIDTH-MARGIN-76, 336, 68, 12)
 PRESET_PREV = (260, 34, 24, 12)
 PRESET_NEXT = (292, 34, 24, 12)
 PRESET_LOAD = (324, 34, 64, 12)
+UI_SCALE = 2
+FONT_SIZE = 16
+TEXT_LINE = 10  # Logical units; 20 physical pixels between text baselines.
+FONT_PATH = Path(__file__).resolve().parent / "assets/fonts/RobotoMono-Medium.ttf"
+
+
+def ui_rect(x, y, w, h, color):
+    pyxel.rect(x*UI_SCALE, y*UI_SCALE, w*UI_SCALE, h*UI_SCALE, color)
+
+
+def ui_border(x, y, w, h, color):
+    pyxel.rectb(x*UI_SCALE, y*UI_SCALE, w*UI_SCALE, h*UI_SCALE, color)
+
+
+def ui_line(x1, y1, x2, y2, color):
+    pyxel.line(x1*UI_SCALE, y1*UI_SCALE, x2*UI_SCALE, y2*UI_SCALE, color)
 
 
 class TextClipboard:
@@ -167,7 +184,10 @@ class Preview:
 
 class App:
     def __init__(self):
-        pyxel.init(WIDTH, HEIGHT, title="Wavetable: Tone Lab", quit_key=pyxel.KEY_NONE)
+        pyxel.init(WIDTH*UI_SCALE, HEIGHT*UI_SCALE, title="Wavetable: Tone Lab",
+                   quit_key=pyxel.KEY_NONE, display_scale=1)
+        self.font = pyxel.Font(str(FONT_PATH), FONT_SIZE)
+        self.char_width = self.font.text_width("M") / UI_SCALE
         pyxel.mouse(True)
         self.settings = ToneSettings()
         self.preset_definitions = _preset_definitions()
@@ -279,7 +299,7 @@ class App:
     @staticmethod
     def inside(rect):
         x, y, w, h = rect
-        return x <= pyxel.mouse_x < x+w and y <= pyxel.mouse_y < y+h
+        return x <= pyxel.mouse_x/UI_SCALE < x+w and y <= pyxel.mouse_y/UI_SCALE < y+h
 
     def mouse_click(self):
         if self.inside(PRESET_PREV):
@@ -299,14 +319,14 @@ class App:
                 self.focus_mml()
                 self.view_start = 0
             self.cursor = max(0, min(len(self.preview.custom),
-                                   self.view_start + (pyxel.mouse_x-MARGIN-8)//pyxel.FONT_WIDTH))
+                                   self.view_start + int((pyxel.mouse_x/UI_SCALE-MARGIN-8)//self.char_width)))
             self.selected_all = False
         else:
             self.editing = False
             self.selected_all = False
             self.focus = "code" if self.inside((RIGHT_X, 168, DETAIL_W, 120)) else "tone"
             if self.inside((MARGIN, 82, TONE_W, len(self.settings.rows())*15)):
-                self.row = min(len(self.settings.rows())-1, (pyxel.mouse_y-82)//15)
+                self.row = min(len(self.settings.rows())-1, int((pyxel.mouse_y/UI_SCALE-82)//15))
 
     def edit_mml(self):
         if pyxel.btn(pyxel.KEY_CTRL) and pyxel.btnp(pyxel.KEY_A):
@@ -406,68 +426,71 @@ class App:
             self.settings.adjust(rows[self.row], direction)
             self.regenerate()
 
-    @staticmethod
-    def panel(x, y, w, h, title):
-        pyxel.rectb(x, y, w, h, 5)
-        pyxel.text(x+6, y+6, title, 12)
+    def text(self, x, y, text, color):
+        for row, line in enumerate(text.split("\n")):
+            pyxel.text(x*UI_SCALE, (y+row*TEXT_LINE)*UI_SCALE, line, color, self.font)
+
+    def panel(self, x, y, w, h, title):
+        ui_border(x, y, w, h, 5)
+        self.text(x+6, y+6, title, 12)
 
     def button(self, rect, label):
         x, y, w, h = rect
-        pyxel.rect(x, y, w, h, 5 if self.inside(rect) else 1)
-        pyxel.rectb(x, y, w, h, 6)
-        pyxel.text(x+(w-len(label)*pyxel.FONT_WIDTH)//2, y+3, label, 7)
+        ui_rect(x, y, w, h, 5 if self.inside(rect) else 1)
+        ui_border(x, y, w, h, 6)
+        self.text(x+(w-self.font.text_width(label)/UI_SCALE)//2, y, label, 7)
 
     def draw(self):
         pyxel.cls(1)
-        pyxel.text(MARGIN, 8, "TONE LAB / STATIC WAVETABLE EDITOR", 7)
+        self.text(MARGIN, 8, "TONE LAB / STATIC WAVETABLE EDITOR", 7)
         self.panel(MARGIN, 24, WIDTH-2*MARGIN, 32, "PRESET / [ ] BROWSE, ENTER LOAD")
         definition = self.preset_definitions[self.preset_cursor]
-        pyxel.text(MARGIN+8, 44, f"{definition.category.title()} / {definition.name.title()}", 7)
+        self.text(MARGIN+8, 44, f"{definition.category.title()} / {definition.name.title()}", 7)
         self.button(PRESET_PREV, "<")
         self.button(PRESET_NEXT, ">")
         self.button(PRESET_LOAD, "LOAD")
-        pyxel.text(404, 38, "Editing: " + (self.settings.preset_name or "Custom").title(), 10)
+        self.text(404, 38, "Editing: " + (self.settings.preset_name or "Custom").title(), 10)
         self.panel(MARGIN, 64, TONE_W, 224, "TONE")
         for i, name in enumerate(self.settings.rows()):
             y = 84 + 15*i
             if i == self.row:
-                pyxel.rect(MARGIN+3, y-2, TONE_W-6, 11, 5)
-            pyxel.text(MARGIN+8, y, name.upper(), 7)
-            pyxel.text(MARGIN+105, y, self.settings.value(name), 10)
-        pyxel.text(MARGIN+8, 274, f"SLOT {self.tone_index} / ONE EDITABLE TONE", 6)
+                ui_rect(MARGIN+3, y-2, TONE_W-6, 11, 5)
+            self.text(MARGIN+8, y, name.upper(), 7)
+            self.text(MARGIN+105, y, self.settings.value(name), 10)
+        self.text(MARGIN+8, 274, f"SLOT {self.tone_index} / ONE EDITABLE TONE", 6)
 
         self.panel(RIGHT_X, 64, DETAIL_W, 96, "WAVEFORM / ONE CYCLE")
         tone = pyxel.tones[self.tone_index]
         values = list(tone.wavetable)
         maximum = (1 << tone.sample_bits)-1
         x0, y0, w, h = RIGHT_X+8, 84, DETAIL_W-16, 64
-        pyxel.line(x0, y0+h/2, x0+w-1, y0+h/2, 5)
+        ui_line(x0, y0+h/2, x0+w-1, y0+h/2, 5)
         previous = None
         for i, value in enumerate(values):
             point = (x0 + i*(w-1)/max(1, len(values)-1), y0+(1-value/maximum)*(h-1))
             if previous is not None:
-                pyxel.line(*previous, *point, 11)
+                ui_line(*previous, *point, 11)
             previous = point
 
         self.panel(RIGHT_X, 168, DETAIL_W, 120, "CODE / import pyxel_wavetable as wt")
         if self.focus == "code":
-            pyxel.rectb(RIGHT_X, 168, DETAIL_W, 120, 10)
+            ui_border(RIGHT_X, 168, DETAIL_W, 120, 10)
         self.button(CODE_COPY, "COPY CODE")
-        pyxel.text(RIGHT_X+8, 186, self.settings.code(), 7)
+        self.text(RIGHT_X+8, 186, self.settings.code(), 7)
         self.panel(MARGIN, 296, WIDTH-2*MARGIN, 28, "PREVIEW")
-        pyxel.text(80, 306, self.preview.name.upper(), 10)
-        pyxel.text(176, 306, f"Use Current Tone: {'ON' if self.preview.auto_tone else 'OFF'}", 7)
-        pyxel.text(280, 306, f"LOOP: {'ON' if self.preview.loop else 'OFF'}", 7)
-        pyxel.text(360, 306, "F5: PLAY / F6: STOP", 7)
+        self.text(80, 306, self.preview.name.upper(), 10)
+        self.text(176, 306, f"Use Current Tone: {'ON' if self.preview.auto_tone else 'OFF'}", 7)
+        self.text(296, 306, f"LOOP: {'ON' if self.preview.loop else 'OFF'}", 7)
+        self.text(360, 306, "F5: PLAY / F6: STOP", 7)
 
         self.panel(MARGIN, 332, WIDTH-2*MARGIN, 36,
                    "CUSTOM MML / FOCUSED" if self.editing else "MML / CLICK TEXT TO EDIT CUSTOM")
         if self.focus == "mml":
-            pyxel.rectb(MARGIN, 332, WIDTH-2*MARGIN, 36, 10)
+            ui_border(MARGIN, 332, WIDTH-2*MARGIN, 36, 10)
         self.button(MML_COPY, "COPY MML")
         self.button(MML_PASTE, "PASTE MML")
         text = self.preview.custom if self.preview.name == "custom" else DEFAULT_MMLS[self.preview.name]
-        columns = (WIDTH-2*MARGIN-16)//pyxel.FONT_WIDTH
+        columns = int((WIDTH-2*MARGIN-16)/self.char_width)
         if self.editing:
             self.view_start = min(self.view_start, self.cursor)
             self.view_start = max(self.view_start, self.cursor-columns+1)
@@ -475,23 +498,23 @@ class App:
             self.view_start = 0
         visible = text[self.view_start:self.view_start+columns]
         if self.editing and self.selected_all:
-            pyxel.rect(MARGIN+8, 350, len(visible)*4, 8, 5)
-        pyxel.text(MARGIN+8, 350, visible, 7)
+            ui_rect(MARGIN+8, 350, len(visible)*self.char_width, TEXT_LINE, 5)
+        self.text(MARGIN+8, 350, visible, 7)
         if self.editing:
-            cx = MARGIN+8+(self.cursor-self.view_start)*pyxel.FONT_WIDTH
-            pyxel.line(cx, 350, cx, 357, 10)
+            cx = MARGIN+8+(self.cursor-self.view_start)*self.char_width
+            ui_line(cx, 350, cx, 350+TEXT_LINE-1, 10)
 
         status = "PLAYING" if pyxel.play_pos(CHANNEL) is not None else "STOPPED"
         message = self.clipboard_error or self.preview.error or f"{status} / FOCUS: {self.focus.upper()} / {self.notice}"
         # Two wrapped rows keep long parser messages inside the status region.
-        columns = (WIDTH-2*MARGIN)//4
+        columns = int((WIDTH-2*MARGIN)/self.char_width)
         lines = [message[i:i+columns] for i in range(0, len(message), columns)]
-        pyxel.text(MARGIN, 376, "\n".join(lines[:2]), 8 if self.preview.error or self.clipboard_error else 11)
+        self.text(MARGIN, 376, "\n".join(lines[:2]), 8 if self.preview.error or self.clipboard_error else 11)
         if self.editing:
             help_text = "MML: CTRL+A ALL / CTRL+C COPY / CTRL+V PASTE / BS/DEL ERASE\nENTER/F5: PLAY  F6: STOP  TAB/ESC: LEAVE EDITOR"
         else:
             help_text = "UP/DOWN: FIELD  LEFT/RIGHT: VALUE  P: PREVIEW  A: Use Current Tone  L: LOOP\nSPACE: PLAY/STOP  F5: RESTART  S/F6: STOP  E/TAB: EDIT  ESC: QUIT"
-        pyxel.text(MARGIN, 402, help_text, 6)
+        self.text(MARGIN, 402, help_text, 6)
 
 
 if __name__ == "__main__":
