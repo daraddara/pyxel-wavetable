@@ -4,14 +4,21 @@
 
 ## インストール
 
-Python 3.10以上、Pyxel 2.9.9以上（3未満）を対象とします。動作確認環境はWindows、Python 3.13.5、Pyxel 2.9.9です。
+Python 3.10以上、Pyxel 2.9.9以上（3未満）が必要です。
 
-プロジェクトのルートで実行します。
+ソースコードを取得し、プロジェクトのルートで利用するPython環境にインストールします。環境管理ツールは任意です。以下はpipを使う例です。
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e '.[test]'
-.\.venv\Scripts\python.exe -m pytest -q
+```sh
+python -m pip install .
+```
+
+このREADMEの `python` は、パッケージをインストールしたPython環境の実行コマンドを指します。環境に応じて `python3` などに読み替えてください。インストールとサンプル実行には同じPython環境を使います。
+
+開発やテストを行う場合は、テスト用の依存もインストールします。
+
+```sh
+python -m pip install -e ".[test]"
+python -m pytest -q
 ```
 
 ## 基本使用例
@@ -175,11 +182,13 @@ PoCでは、32/64点の複雑なPM波形に高周波的な粗さがあり、128�
 
 ## 実行例
 
-```powershell
-.\.venv\Scripts\python.exe examples/basic_tones.py
-.\.venv\Scripts\python.exe examples/melody_compare.py
-.\.venv\Scripts\python.exe examples/custom_wave.py
-.\.venv\Scripts\python.exe examples/percussion_presets.py
+プロジェクトのルートから、インストール先と同じPython環境で実行します。
+
+```sh
+python examples/basic_tones.py
+python examples/melody_compare.py
+python examples/custom_wave.py
+python examples/percussion_presets.py
 ```
 
 - `basic_tones.py`: `add_tones()` で登録し、返されたindexを `Sound.set()` に直接渡す。1〜5でSINE / SAW / PULSE（duty=0.125）/ HARMONICS / PMを選択。同じメロディを再生。SPACEで停止。
@@ -191,15 +200,15 @@ PoCでは、32/64点の複雑なPM波形に高周波的な粗さがあり、128�
 
 ## Tone Lab：パラメータを調整して試聴する
 
-仮想環境を有効にしたターミナルで実行します。
+ほかのサンプルと同じPython環境で実行します。
 
-```powershell
+```sh
 python examples/tone_lab.py
 ```
 
 上側のPRESETで音作りの出発点を読み込み、左側のTONEで設定を調整します。右側のWAVEFORMで1周期の形状、CODEでそのまま利用できる生成コードを確認できます。下側にはPREVIEW、MML入力欄、再生状態・エラーと操作説明を表示します。
 
-文字は同梱のRoboto Mono Mediumを16pxで描画します。従来の小さなビットマップ文字の拡大から、1136×848の描画領域へ直接描く方式に変更し、文字の解像度と行間を増やしました。OSにフォントをインストールする必要はありません。配布元とフォント固有のライセンスは [examples/assets/fonts/README.md](examples/assets/fonts/README.md) に記載しています。
+文字は同梱のRoboto Mono Mediumを16px、行間20pxで描画します。画面の描画領域は1136×848です。OSにフォントをインストールする必要はありません。配布元とフォント固有のライセンスは [examples/assets/fonts/README.md](examples/assets/fonts/README.md) に記載しています。
 
 `presets.py` の全10種を、共通の定義から一覧表示します。TonalはBell / Bass / Lead / Organ / Soft、PercussionはTom / Woodblock / Cowbell / Metallic / Clickです。PRESET欄の `<` / `>` ボタンまたは `[` / `]` キーで選び、LOADボタンまたはEnterで読み込みます。MML編集中のEnterは引き続き試聴用です。
 
@@ -249,7 +258,7 @@ MML欄に **COPY MML / PASTE MML**、読み取り専用のCODE欄に **COPY CODE
 
 COPY MMLは現在表示中のMML全文、COPY CODEは生成コード全文をOSクリップボードへコピーします。PASTE MMLは編集中ならカーソル位置へ挿入し、Ctrl+Aで全選択していれば置換します。未編集のPreviewから押した場合は、CUSTOMへ切り替えて貼り付けた内容を設定します。改行は空白へ変換します。Ctrl+C / Ctrl+Vも対象欄のフォーカスに従います。CODEは生成結果なのでPaste操作はありません。
 
-Pyxel Editorのコピー／貼り付けはアプリ内バッファを使いますが、Tone Labは外部とのテキスト交換が必要なため、example内だけで標準ライブラリの `tkinter` を利用します。新たなpip依存やライブラリ本体へのUI依存は追加していません。Tkがない環境やクリップボードを利用できない環境では、操作時に `CLIPBOARD ERROR` を表示し、MMLを保持します。Windowsでは実際のOSクリップボードでボタン処理経由のコピー・貼り付け・MML再生と、外部プロセスとの双方向のテキスト交換を確認しています。コピー内容はTone Labを開いたまま別アプリへ貼り付けてください。通常の文字入力は引き続きPyxelの `input_text` を使います。
+Tone Labのクリップボード操作には、Pythonの `tkinter` とデスクトップ環境が必要です。Pythonの配布方法によってはTkが別途必要になります。Tkがない環境やクリップボードを利用できない環境では、操作時に `CLIPBOARD ERROR` を表示し、MMLを保持します。ライブラリ本体は `tkinter` に依存しません。コピー内容はTone Labを開いたまま別アプリへ貼り付けてください。通常の文字入力にはPyxelの `input_text` を使います。
 
 Use Current Toneは初期状態ONで、再生時に `@<編集中Toneのindex>` を先頭へ付けます。CUSTOM内に別の `@n` を書いた場合は、その位置から通常のPyxelの音色切替が有効です。OFFではMMLを変更せず渡します。空CUSTOMやMML構文エラーは画面に表示し、入力を保持します。修正して正常に再生するとエラー表示が消えます。
 
