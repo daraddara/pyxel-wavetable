@@ -141,6 +141,8 @@ Pyxel 2.9.9の `Sound.set()` / `set_tones()` のTone文字列は1文字ずつ解
 
 ## Tone Lab
 
+![Tone Lab](docs/images/tone-lab-overview.png)
+
 `examples/tone_lab.py` は、Presetやgeneratorのパラメータを調整しながらToneを試聴するためのインタラクティブなサンプルです。
 
 ```sh

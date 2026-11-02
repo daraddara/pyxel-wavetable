@@ -12,6 +12,8 @@ Tone Labはライブラリ本体のAPIではなく、`examples/tone_lab.py` に�
 
 Tone Labは主に次の領域で構成されています。
 
+![Tone Lab overview](images/tone-lab-overview.png)
+
 1. **PRESET** — Presetの選択と読込
 2. **TONE** — generatorとパラメータの編集
 3. **WAVEFORM** — 現在の1周期wavetable表示
@@ -19,17 +21,6 @@ Tone Labは主に次の領域で構成されています。
 5. **PREVIEW** — 試聴パターン、Use Current Tone、Loop
 6. **MML** — CUSTOM MMLの入力・Copy/Paste
 7. **STATUS** — 再生状態、フォーカス、エラー表示
-
-### Screenshot plan
-
-Public公開前に以下のスクリーンショットを追加する想定です。
-
-- Tone Lab全体
-- PresetをLOADした状態
-- CUSTOM MML編集中
-- CODE生成・Copy操作が分かる状態
-
-画像を追加する場合は `docs/images/` 配下に置き、このマニュアルの対応する節へ挿入してください。
 
 ## Presetから音作りを始める
 
@@ -55,7 +46,9 @@ PRESET欄では `presets.py` に定義された全10種を選択できます。
 
 Presetは固定の再生モードではありません。LOADするとgeneratorとパラメータへ展開され、その後は自由に変更できます。
 
-例えばCowbellは概ね次の状態へ展開されます。
+例えばCowbellをLOADすると、PMの編集パラメータへ展開されます。画像では `Editing: Cowbell` と、対応する波形・`wt.pm(...)` の生成コードを確認できます。
+
+![Cowbell preset loaded into Tone Lab](images/tone-lab-preset.png)
 
 ```text
 Generator: PM
@@ -186,6 +179,10 @@ AキーでON/OFFを切り替えます。
 
 CUSTOMを選ぶと任意のMMLを入力できます。
 
+![Editing custom MML in Tone Lab](images/tone-lab-custom-mml.png)
+
+画像は `T140 O4 L8 C E G > C < G E C` を入力した状態です。黄色い枠とカーソルが入力先を示し、STATUSには `FOCUS: MML` が表示されます。
+
 編集開始:
 
 ```text
@@ -225,7 +222,9 @@ CODE欄には:
 
 があります。
 
-Tone LabのClipboard機能はexample内だけで `tkinter` を遅延利用します。ライブラリ本体は `tkinter` に依存しません。
+COPY MMLは現在表示中のMML全文、COPY CODEは生成コード全文をOSクリップボードへコピーします。PASTE MMLは編集中ならカーソル位置へ挿入し、Ctrl+Aで全選択していれば置換します。未編集のPreviewから押すとCUSTOMへ切り替え、貼り付けた内容を設定します。
+
+Copy/PasteにはPythonの `tkinter` とデスクトップ環境が必要です。Pythonの配布方法によってはTkが別途必要になります。ライブラリ本体は `tkinter` に依存しません。コピー内容はTone Labを開いたまま別アプリへ貼り付けてください。
 
 Tkが利用できない環境やClipboardへアクセスできない環境では `CLIPBOARD ERROR` を表示し、現在のMMLは保持します。
 
@@ -235,12 +234,14 @@ CODE欄には、現在の編集状態をgenerator呼び出しとして表示し�
 
 PresetをLOADした場合でも、Preset関数ではなく展開後のgenerator設定を表示します。
 
-例:
+![Generated Python code in Tone Lab](images/tone-lab-code.png)
+
+画像はCowbellからratioとindexを変更し、COPY CODEを押した状態です。`Editing: Custom` となり、CODE欄の枠とSTATUSの `COPIED CODE TO OS CLIPBOARD` で操作対象と結果を確認できます。表示されているコードは次のとおりです。
 
 ```python
 wt.pm(
-    ratio=3,
-    index=1.70,
+    ratio=5,
+    index=2.10,
     size=128,
     sample_bits=8,
     gain=0.40,
@@ -294,18 +295,7 @@ Tone LabはMML再生時の例外で終了せず、STATUS欄に `MML ERROR` を�
 
 ## Tone slot behavior
 
-Tone Labは起動時に編集用Toneを1つだけ `add_tone()` で登録します。
-
-以降はそのToneの:
-
-- mode
-- sample_bits
-- wavetable
-- gain
-
-を更新します。
-
-Preset切替やパラメータ変更のたびにTone indexを増やしません。
+Tone Labは編集用Toneを1つだけ使います。Preset切替やパラメータ変更のたびにTone indexが増えることはありません。内部の更新方式は [Design](design.md) を参照してください。
 
 ## Scope
 
