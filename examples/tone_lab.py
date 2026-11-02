@@ -88,12 +88,14 @@ class ToneSettings:
 
     @classmethod
     def from_preset(cls, definition):
-        amplitudes = list(definition.amplitudes)
-        amplitudes += [0.0] * max(0, 8-len(amplitudes))
-        return cls(generator=definition.generator, size=definition.size,
-                   sample_bits=definition.sample_bits, gain=definition.gain,
-                   ratio=definition.ratio, index=definition.index,
-                   amplitudes=amplitudes, preset_name=definition.name)
+        settings = cls(generator=definition.generator, size=definition.size,
+                       sample_bits=definition.sample_bits, gain=definition.gain,
+                       ratio=definition.ratio, index=definition.index,
+                       preset_name=definition.name)
+        if definition.generator == "harmonics":
+            settings.amplitudes = list(definition.amplitudes)
+            settings.amplitudes += [0.0] * max(0, 8-len(settings.amplitudes))
+        return settings
 
     def generate(self):
         common = dict(size=self.size, sample_bits=self.sample_bits, gain=self.gain)

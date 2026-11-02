@@ -295,3 +295,14 @@ def test_pulse_edit_and_no_op_limit():
     settings = ToneSettings(ratio=1, preset_name="example")
     settings.adjust("ratio", -1)
     assert settings.preset_name == "example"
+
+
+@pytest.mark.parametrize("definition", [d for d in lab["_preset_definitions"]() if d.generator == "pm"],
+                         ids=lambda d: d.name)
+def test_pm_preset_keeps_harmonics_defaults_for_generator_switch(definition):
+    settings = ToneSettings.from_preset(definition)
+    assert settings.amplitudes == ToneSettings().amplitudes
+    settings.adjust("generator", 1)
+    assert settings.generator == "harmonics"
+    assert settings.preset_name is None
+    assert len(set(settings.generate().wavetable)) > 1
