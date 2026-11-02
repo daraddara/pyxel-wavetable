@@ -11,6 +11,8 @@ DEFAULT_MMLS = {
     "melody": "T120 O3 L8 C D E G A G E D",
     "bass": "T110 O2 L8 C C G G A G E C",
     "short": "T120 O4 L16 C R C R C R C R",
+    "perc_low": "T120 V100 Q100 L16 @ENV1{127,10,0} O2 C R C R C8 R8 G R C R C8 R8",
+    "perc_high": "T120 V100 Q100 L16 @ENV1{127,6,0} O5 C R C R C8 R8 G R C R C8 R8",
 }
 PREVIEWS = (*DEFAULT_MMLS, "custom")
 SIZES = (32, 64, 128, 256, 512)

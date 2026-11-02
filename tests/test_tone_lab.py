@@ -181,7 +181,7 @@ def test_preview_switch_restarts_only_when_playing(editor, monkeypatch, playing)
 def test_switch_to_invalid_custom_stops_old_loop(editor, monkeypatch):
     app, _ = editor
     app.tone_index = 4
-    app.preview.name = "short"
+    app.preview.name = next(reversed(lab["DEFAULT_MMLS"]))
     app.preview.custom = ""
     stopped = []
     monkeypatch.setattr(lab["pyxel"], "play_pos", lambda ch: (0, .5))

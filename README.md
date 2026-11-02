@@ -209,7 +209,7 @@ python examples/tone_lab.py
 | --- | --- |
 | パラメータの選択・増減 | ↑↓で項目選択、←→で変更 |
 | Presetの選択・読込 | `<` / `>` ボタンまたは `[` / `]` キーで選択、LOAD / Enterで読込 |
-| Preview切替 | P：melody → bass → short → custom。再生中は新しいPreviewを先頭から即再生、停止中は選択のみ |
+| Preview切替 | P：melody → bass → short → perc_low → perc_high → custom。再生中は新しいPreviewを先頭から即再生、停止中は選択のみ |
 | 現在ToneをMML先頭に自動付加 | A：Use Current Tone ON/OFF |
 | ループ切替 | L |
 | 再生・停止 | SPACEで再生/停止をトグル。F5で先頭から再生、S / F6で停止 |
@@ -229,13 +229,17 @@ python examples/tone_lab.py
 
 これらはTone Labの操作範囲で、ライブラリの入力範囲を変更するものではありません。初期倍音は `[1, 0.5, 0.25, 0.1, 0, 0, 0, 0]` です。
 
-既定のPreviewは以下の3種類です。
+既定のPreviewは以下の5種類です。
 
 ```text
 melody: T120 O3 L8 C D E G A G E D
 bass:   T110 O2 L8 C C G G A G E C
 short:  T120 O4 L16 C R C R C R C R
+perc_low:  T120 V100 Q100 L16 @ENV1{127,10,0} O2 C R C R C8 R8 G R C R C8 R8
+perc_high: T120 V100 Q100 L16 @ENV1{127,6,0} O5 C R C R C8 R8 G R C R C8 R8
 ```
+
+`perc_low` はタムなどの低音系、`perc_high` はウッドブロック・カウベル・クリックなどの高音系を試すためのパターンです。同じリズムをO2 / O5で再生し、既存MML Envelopeでそれぞれ約104ms / 63msで音量を0へ下げます。ToneそのものやPresetの設定は変えず、発音と減衰をPyxelに任せます。再生中にPで切り替えると、選んだパターンを即座に先頭から再生します。
 
 CUSTOM入力は `pyxel.input_text` を使う1行エディターです。ASCIIのMMLを入力でき、長い文字列はカーソルに合わせて横スクロールします。←→ / HOME / ENDで移動、Backspace / Deleteで削除、Ctrl+Aで全選択、Enter / F5で再生、F6で停止、TAB / ESCで編集を終了します。編集中の文字キーやSPACEは入力用で、Preview切替などのショートカットにはなりません。改行・タブが入力イベントに含まれる場合は空白へ変換します。
 
