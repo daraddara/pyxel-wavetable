@@ -16,7 +16,7 @@
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.11+
 - Pyxel 2.9.9以上、3未満
 
 ## Install
