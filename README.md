@@ -124,6 +124,28 @@ wt.soft()
 共通のキーワード引数は `size=128, sample_bits=8, gain=0.5` です。ただし `from_samples()` は `size` を取りません。
 基本波形、`harmonics()`、`from_function()`、`from_samples()` は `normalize=True` も受け取ります。`pm()` とプリセットは常に正規化します。`size` と `sample_bits` はキーワード専用です。プリセットは `size` / `sample_bits` / `gain` を変更できます。
 
+## パーカッション系プリセット
+
+静的wavetableで音色の方向性を作る5つのプリセットです。実物の楽器を忠実に再現するものではなく、プリセット自身に減衰やピッチ変化はありません。
+
+| API | 音色の方向性 | 実装 | デフォルトgain |
+| --- | --- | --- | --- |
+| `tom()` | 丸い電子タム系 | 低次倍音中心の `harmonics()` | 0.55 |
+| `woodblock()` | 乾いた中空感のある木質系 | 奇数倍音を強めた `harmonics()` | 0.45 |
+| `cowbell()` | 明るい電子的な金属打楽器系 | `pm(ratio=3, index=1.7)` | 0.40 |
+| `metallic()` | 金属打楽器向けの複雑な倍音 | `harmonics()` | 0.35 |
+| `click()` | 高域成分の多いclick/rim系素材 | `harmonics()` | 0.35 |
+
+いずれも通常の `pyxel.Tone` を返し、キーワード引数 `size=128`、`sample_bits=8`、`gain` を変更できます。
+
+```python
+# pyxel.init() の後で登録する
+tom, cowbell = wt.add_tones([wt.tom(), wt.cowbell()])
+pyxel.play(0, f"T120 V100 Q100 L4 @{cowbell} @ENV1{{127,10,0}} O4 C")
+```
+
+減衰は既存の [Pyxel MML Envelope](https://raw.githubusercontent.com/kitao/pyxel/main/docs/mml-commands.md) に任せます。`@ENV1{127,10,0}` は初期音量127から10 tickで0へ下げます。1 tickは四分音符の1/48で、T120なら約10.4msです。波形やPM indexを発音中に変更せず、独自Envelope APIも追加しません。
+
 ## 正規化・量子化
 
 入力はPyxel内部の整数値ではなく、原則-1.0〜+1.0の波形値です。
@@ -157,12 +179,14 @@ PoCでは、32/64点の複雑なPM波形に高周波的な粗さがあり、128�
 .\.venv\Scripts\python.exe examples/basic_tones.py
 .\.venv\Scripts\python.exe examples/melody_compare.py
 .\.venv\Scripts\python.exe examples/custom_wave.py
+.\.venv\Scripts\python.exe examples/percussion_presets.py
 ```
 
 - `basic_tones.py`: `add_tones()` で登録し、返されたindexを `Sound.set()` に直接渡す。1〜5でSINE / SAW / PULSE（duty=0.125）/ HARMONICS / PMを選択。同じメロディを再生。SPACEで停止。
 - `melody_compare.py`: BELL → BASS → LEAD → ORGAN → SOFTで同じメロディを順次再生。通常の `Music` がループ全体を管理。SPACEで再開、Sで停止。
 - `custom_wave.py`: `sin(p) + 0.4*sin(2p) + 0.2*sin(5p)` を一度だけ生成。SPACEで再開、Sで停止。
+- `percussion_presets.py`: 1〜5でTOM / WOODBLOCK / COWBELL / METALLIC / CLICKを単音再生。`add_tones()` で登録し、各音色の減衰には通常のMML Envelopeを使用。SPACEで停止。
 
-いずれもESCで終了します。音色の切替時はフレーズの先頭から再生します。
+いずれもESCで終了します。メロディ比較では音色の切替時にフレーズの先頭から再生します。
 
 設計境界は [docs/design.md](docs/design.md) を参照してください。PyxelのAPIは [公式APIリファレンス](https://kitao.github.io/pyxel/web/api-reference/) を参照しています。
