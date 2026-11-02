@@ -163,6 +163,26 @@ python examples/tone_lab.py
 
 詳しい画面構成・操作方法・ショートカットは [Tone Lab Manual](docs/tone-lab.md) を参照してください。
 
+## BGM Compare
+
+![BGM Compare](docs/images/bgm-compare-10c.png)
+
+`examples/bgm_compare.py` は、同じBGMをPyxel標準Toneとwavetable Toneで切り替えて聴き比べるサンプルです。
+
+wavetableでは、長いsizeほど複雑な波形を表現しやすい一方、Pyxel 2.9.9の整数クロック丸めによるピッチ誤差が大きくなりやすいというトレードオフがあります。BGM Compareでは、実際の楽曲で使われる音域を調べ、次の3条件を切り替えて比較できます。
+
+- **TARGET 10 c** — 予測ピッチ誤差の保守的な上限を10 cent以下に収めることを目標にsizeを選ぶ
+- **TARGET 25 c** — 25 cent以下を目標に、より長いsizeとの音色差を比較する
+- **FIXED SIZE 128** — `DEFAULT_SIZE=128` 相当の固定条件で比較する
+
+10 / 25 centは「聞き取れない」「許容できる」ことを保証する閾値ではありません。ピッチ精度と波形・音色の再現性の妥協点を、数値と実際のBGMの両方で確認するための比較条件です。
+
+```sh
+python examples/bgm_compare.py
+```
+
+Tone Labが個々のToneや任意フレーズの調整・診断を行うのに対し、BGM Compareは複数パートを含む実際の楽曲で結果を確認する用途です。詳しい操作、size選択、表示値の意味は [BGM Compare Manual](docs/bgm-compare.md) を参照してください。
+
 ## Examples
 
 ```sh
@@ -200,7 +220,7 @@ Pyxel 2.9.9では、サンプルの再生時間が整数クロックへ丸めら
 
 ピッチ精度が重要なら、実際に使う音域・楽曲で32 / 64 / 128点などを比較して選んでください。短いwavetableは一般にピッチ誤差を抑えやすい一方、複雑なPMや高次倍音を含む波形では再現性とのトレードオフがあります。ライブラリは自動ピッチ補正を行わず、用途に応じたsizeの選択を利用者へ委ねます。実測と選び方は [Wavetable長とピッチ誤差](docs/wavetable-pitch.md)、制約と残る検証課題は [技術課題](docs/technical-issues.md) を参照してください。
 
-Tone LabのPitch Error表示では、指定音域に対するsize別の予測ピッチ誤差を、音を鳴らさず数値とグラフで確認できます。使い方は [Tone Lab Manual](docs/tone-lab.md#pitch-error音を鳴らさずsizeを比較する) を参照してください。
+Tone LabのPitch Error表示では、指定音域に対するsize別の予測ピッチ誤差を、音を鳴らさず数値とグラフで確認できます。使い方は [Tone Lab Manual](docs/tone-lab.md#pitch-error音域ごとのピッチ誤差を確認する) を参照してください。
 
 正規化・量子化・デフォルト値の背景・責務境界などの詳細は [Design](docs/design.md) を参照してください。
 

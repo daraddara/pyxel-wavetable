@@ -1,8 +1,24 @@
 # BGM Compare Manual
 
-BGM Compareは、Pyxelの `gen_bgm()` で生成した同じ曲を、標準Toneとwavetable Toneで聴き比べるサンプルです。曲の音符・テンポ・Envelope・Vibratoを保ったまま音色を切り替え、10 cent目標・25 cent目標・128点固定の違いも比較できます。
+BGM Compareは、**wavetable sizeによるピッチ精度と音色再現性のトレードオフを、実際のBGMで確認するためのサンプル**です。
 
-Tone Labが単音・フレーズでの音作りを中心とするのに対し、BGM Compareは複数パートが重なる実際の楽曲での比較に使います。実装は `examples/bgm_compare.py` と内部補助モジュール `examples/_bgm_pitch.py` にあり、ライブラリの公開APIではありません。
+Pyxelのwavetable再生では、wavetableを長くすると複雑な波形を表現しやすくなる一方、Pyxel 2.9.9の整数クロック丸めによって、音域によっては12平均律からのピッチ誤差が大きくなります。逆にsizeを短くするとピッチ誤差を抑えやすくなりますが、PMや高次倍音を含む波形では形状や音色が変わる場合があります。
+
+Tone Labでは、指定音域に対するsize別の予測ピッチ誤差を確認しながら、個々のToneやフレーズを調整できます。BGM Compareはその次の段階として、**複数パートが重なる同じ楽曲を、Pyxel標準Toneとwavetable Toneで切り替えて聴き比べる**ために使います。
+
+比較では、曲の音符・テンポ・Envelope・Vibratoを維持したままToneだけを切り替えます。また、wavetable側では次の3条件を選べます。
+
+| モード | 比較する内容 |
+| --- | --- |
+| TARGET 10 c | 使用音域とVibratoを考慮した予測誤差の保守的な上限を10 cent以下に収めることを目標にsizeを選ぶ |
+| TARGET 25 c | 同じ方法で25 cent以下を目標とし、より長いsizeによる音色の違いを確認する |
+| FIXED SIZE 128 | sizeを128点に固定し、ライブラリの既定sizeに近い条件と比較する |
+
+ここでの10 / 25 centは、**可聴性や許容度の絶対基準ではありません**。「10 centなら問題ない」「25 centなら不自然」という意味ではなく、ピッチ精度をどこまで優先するとsizeと音色がどう変わるかを比較するための目標値です。
+
+BGM Compareはピッチを補正する機能でも、曲中の音符ごとにToneを切り替える機能でもありません。選んだsizeはToneごとに曲全体で固定し、再生はPyxel標準の `Sound` / `Music` / `playm()` に任せます。
+
+実装は `examples/bgm_compare.py` と内部補助モジュール `examples/_bgm_pitch.py` にあり、ライブラリの公開APIではありません。
 
 ## 起動と最初の比較
 
