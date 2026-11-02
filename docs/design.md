@@ -42,6 +42,8 @@ gainは `Tone.gain` にだけ設定する。サンプルに焼き込むとTone�
 
 `from_samples()` は入力の長さを維持する。他のgeneratorは `[0, 2π)` を等間隔でサンプリングし、重複する終端を含めない。sawは上昇方向。pulseは先頭からduty割合だけ正値になる。dutyの時間分解能は1/sizeなので、任意のdutyが正確に表現できるとは限らない。
 
+`DEFAULT_SIZE=128` は当初の波形再現性・試聴結果を基にした音質寄りの初期値で、ピッチ精度の推奨値ではない。Pyxel 2.9.9の再生エンジン由来の整数クロック量子化は隠蔽せず、sizeをTone生成パラメータとして利用者へ委ねる。使用音域・音色再現性・許容誤差の選択材料を [ピッチ実測と利用ガイド](wavetable-pitch.md) で示す。自動ピッチ補正・音符ごとのTone切替・自動detune・独自再生系は責務外とし、Sound / Music / MML / play / playmはPyxel標準機能を使う。
+
 ## 固定PM波形
 
 公開API `pm()` は位相変調（phase modulation、PM）の式 `sin(p + index * sin(ratio*p))` から固定波形を生成する。ratioを正の整数に限定し、キャリア1周期で波形が閉じる条件を保つ。envelopeや非整数比の複数周期テーブルは実装しない。
