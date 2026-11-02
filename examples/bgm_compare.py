@@ -2,11 +2,17 @@
 
 from dataclasses import dataclass, replace
 from pathlib import Path
+import runpy
 
 import pyxel
 import pyxel_wavetable as wt
 
-WIDTH, HEIGHT = 960, 700
+# Keep this experiment separate from the installed library and Tone Lab API.
+_pitch = runpy.run_path(str(Path(__file__).with_name("_bgm_pitch.py")))
+score_notes, choose_sizes = _pitch["score_notes"], _pitch["choose_sizes"]
+error_bound, pitch_error = _pitch["error_bound"], _pitch["pitch_error"]
+
+WIDTH, HEIGHT = 960, 864
 FONT_PATH = Path(__file__).resolve().parent / "assets/fonts/RobotoMono-Medium.ttf"
 GENRES = ("Title", "Departure", "Town", "Peaceful", "Field", "Adventure", "Battle", "Crisis")
 INSTRUMENTS = ("Melody / Reverb / Bass", "Melody / Bass / Drums",
@@ -19,6 +25,7 @@ BUTTONS = {
     "toggle": (596, 58, 160, 40), "restart": (772, 58, 164, 40),
     "generate": (24, 294, 260, 36), "next_seed": (300, 294, 260, 36),
     "loop": (576, 294, 160, 36), "noise": (24, 536, 440, 36),
+    "target": (480, 536, 456, 36),
 }
 
 
@@ -41,8 +48,7 @@ class Comparison:
     def __init__(self):
         # Keep the original objects intact, including native noise metadata.
         self.native = tuple(list(pyxel.tones)[:4])
-        self.wave = (wt.soft(gain=self.native[0].gain), wt.lead(gain=self.native[1].gain),
-                     wt.pm(gain=self.native[2].gain), wt.metallic(gain=self.native[3].gain))
+        self.target = 10
         self.wavetable = False
         self.replace_noise = False
         self.loop = True
@@ -50,6 +56,24 @@ class Comparison:
         self.mmls = ()
         self.durations = ()
         self.generate(self.settings)
+
+    def make_bank(self, notes, vibrato, target, replace_noise=None):
+        replace_noise = self.replace_noise if replace_noise is None else replace_noise
+        evaluated = notes if replace_noise else (*notes[:3], ())
+        sizes = choose_sizes(evaluated, vibrato, target)
+        bank = tuple(factory(size=size, gain=original.gain)
+                     for factory, size, original in zip((wt.soft, wt.lead, wt.pm, wt.metallic), sizes, self.native))
+        return sizes, bank
+
+    def cycle_target(self):
+        target = {10: 25, 25: None, None: 10}[self.target]
+        sizes, bank = self.make_bank(self.notes, self.vibrato, target)
+        was_playing = self.playing()
+        pyxel.stop()
+        self.target, self.sizes, self.wave = target, sizes, bank
+        self.apply_bank()
+        if was_playing:
+            self.restart()
 
     def playing(self):
         return any(pyxel.play_pos(channel) is not None for channel in range(4))
@@ -68,6 +92,8 @@ class Comparison:
         sounds = [pyxel.Sound() for _ in mmls]
         for sound, mml in zip(sounds, mmls):
             sound.mml(mml)
+        notes, vibrato = score_notes(mmls)
+        sizes, bank = self.make_bank(notes, vibrato, self.target)
         durations = tuple(sound.total_sec() for sound in sounds)
         music = pyxel.Music()
         music.set(*[[i] if duration != 0 else [] for i, duration in enumerate(durations)])
@@ -77,6 +103,7 @@ class Comparison:
             pyxel.sounds[i] = sound
         pyxel.musics[0] = music
         self.settings, self.mmls, self.durations = settings, mmls, durations
+        self.notes, self.vibrato, self.sizes, self.wave = notes, vibrato, sizes, bank
         self.apply_bank()
         if was_playing:
             self.restart()
@@ -97,9 +124,11 @@ class Comparison:
             self.restart()
 
     def toggle_noise(self):
+        replace_noise = not self.replace_noise
+        sizes, bank = self.make_bank(self.notes, self.vibrato, self.target, replace_noise)
         was_playing = self.playing()
         pyxel.stop()
-        self.replace_noise = not self.replace_noise
+        self.replace_noise, self.sizes, self.wave = replace_noise, sizes, bank
         self.apply_bank()
         if was_playing:
             self.restart()
@@ -140,6 +169,8 @@ class App:
                     c.restart()
             elif action == "noise":
                 c.toggle_noise()
+            elif action == "target":
+                c.cycle_target()
             self.error = ""
         except Exception as exc:
             self.error = str(exc)
@@ -152,7 +183,7 @@ class App:
     def update(self):
         actions = {pyxel.KEY_A: "default", pyxel.KEY_B: "wavetable", pyxel.KEY_SPACE: "toggle",
                    pyxel.KEY_R: "restart", pyxel.KEY_G: "generate", pyxel.KEY_N: "next_seed",
-                   pyxel.KEY_L: "loop", pyxel.KEY_D: "noise"}
+                   pyxel.KEY_L: "loop", pyxel.KEY_D: "noise", pyxel.KEY_F: "target"}
         for key, action in actions.items():
             if pyxel.btnp(key):
                 self.act(action)
@@ -213,6 +244,7 @@ class App:
             wave_name = WAVE_NAMES[i] if i != 3 or c.replace_noise else "KEEP NATIVE NOISE"
             self.text(32, 408+i*28, f"{i}: {native_name:<10} -> {wave_name}", 7)
         self.button(BUTTONS["noise"], "D: NOISE -> METALLIC" if c.replace_noise else "D: KEEP NATIVE NOISE", c.replace_noise)
+        self.button(BUTTONS["target"], f"F: TARGET {c.target} c" if c.target else "F: FIXED SIZE 128")
         self.text(24, 584, "Score notes, tempo, volume and MML envelopes stay unchanged.", 6)
         self.text(24, 608, "Tone gain values match originals; perceived loudness may differ.", 6)
         if self.error:
@@ -220,6 +252,18 @@ class App:
         else:
             self.text(24, 634, "PLAYING" if c.playing() else "STOPPED", 11)
         self.text(24, 666, "UP/DOWN: field  LEFT/RIGHT: value  Buttons: click  ESC: quit", 6)
+        self.text(24, 704, "PYXEL 2.9.9 MODEL / FIXED SIZE PER TONE / NO NOTE CORRECTION", 12)
+        for i, (notes, size) in enumerate(zip(c.notes, c.sizes)):
+            if i == 3 and not c.replace_noise:
+                info = "NATIVE NOISE (not pitch-evaluated)"
+            elif not notes:
+                info = "UNUSED"
+            else:
+                maximum = max(abs(pitch_error(note, size)) for note in notes)
+                bound = error_bound(notes, size, c.vibrato)
+                info = f"size {size:3}  base max {maximum:5.1f} c  bound {bound:5.1f} c"
+            self.text(32, 732+i*22, f"Tone {i}: {info}", 7)
+        self.text(24, 824, "Targets vs 12-TET, not A/B difference or hearing thresholds. Short tables alter timbre.", 6)
 
 
 if __name__ == "__main__":

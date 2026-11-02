@@ -147,3 +147,37 @@ def test_settings_limits(name, value, direction, expected):
     adjusted = settings.adjust(name, direction)
     assert getattr(adjusted, name) == expected
     assert getattr(settings, name) == value
+
+
+def test_targets_cycle_without_regenerating_score(comparison):
+    model, fake, tracks, calls = comparison
+    model.restart()
+    score = fake.musics[0]
+    for target in (25, None, 10):
+        model.cycle_target()
+        assert model.target == target
+        assert fake.active
+        assert model.mmls == tracks and fake.musics[0] is score
+        for group, size in zip(model.notes[:3], model.sizes[:3]):
+            if target:
+                assert lab["error_bound"](group, size, model.vibrato) <= target
+            else:
+                assert size == 128
+    assert len([call for call in calls if call[0] == "generate"]) == 1
+
+
+def test_stopped_target_change_stays_stopped(comparison):
+    model, fake, _, _ = comparison
+    model.cycle_target()
+    assert model.target == 25 and not fake.active
+
+
+def test_unsupported_score_keeps_previous_playback(comparison):
+    model, fake, tracks, _ = comparison
+    model.restart()
+    score = fake.musics[0]
+    fake.gen_bgm = lambda **kwargs: ("O5 C @D10 D", *tracks[1:])
+    with pytest.raises(ValueError, match="unsupported"):
+        model.generate(lab["SongSettings"](seed=1))
+    assert fake.active and fake.musics[0] is score
+    assert model.mmls == tracks
