@@ -1,5 +1,7 @@
 # pyxel-wavetable
 
+[![tests](https://github.com/daraddara/pyxel-wavetable/actions/workflows/tests.yml/badge.svg)](https://github.com/daraddara/pyxel-wavetable/actions/workflows/tests.yml)
+
 `pyxel-wavetable` は、数式・パラメータ・波形サンプルから通常の `pyxel.Tone` を生成する小さなPythonユーティリティです。
 
 生成したToneはPyxel標準の `Sound` / `Music` / MML / `play()` / `playm()` からそのまま利用できます。Pyxel本体やRustコードは変更しません。
