@@ -37,7 +37,7 @@ PITCH_CONTROLS = {
     "end_down": (RIGHT_X+156, 84, 18, 12),
     "end_up": (RIGHT_X+232, 84, 18, 12),
 }
-PITCH_GRAPH = (RIGHT_X+48, 194, DETAIL_W-64, 62)
+PITCH_GRAPH = (RIGHT_X+48, 200, DETAIL_W-64, 56)
 PITCH_COLORS = (11, 12, 10, 14, 9)
 # Verified against the 366 measurements in docs/wavetable-pitch.csv.
 # This is a Pyxel 2.9.9 prediction, not an audio measurement or correction.
@@ -93,6 +93,26 @@ def pitch_summary(start, end, size):
             "avg": sum(map(abs, errors))/len(errors)}
 
 
+def pitch_y(cents, limit):
+    """Normalized graph Y, shared by predictions and fixed reference lines."""
+    return .5-cents/(2*limit)
+
+
+def pitch_guides(limit):
+    """Actual Y positions and separated callout labels in logical graph units."""
+    height = PITCH_GRAPH[3]
+    guides = [{"cents": cents, "y": pitch_y(cents, limit)*(height-1),
+               "color": 6 if cents == 0 else 13 if abs(cents) == 25 else 5}
+              for cents in (25, 10, 0, -10, -25)]
+    tops = [max(0, min(height-10, guide["y"]-4)) for guide in guides]
+    for i in range(1, len(tops)):
+        tops[i] = max(tops[i], tops[i-1]+10)
+    tops[-1] = min(tops[-1], height-10)
+    for i in range(len(tops)-2, -1, -1):
+        tops[i] = min(tops[i], tops[i+1]-10)
+    return [dict(guide, label_y=top) for guide, top in zip(guides, tops)]
+
+
 @dataclass
 class PitchRange:
     start: int = 48  # C3
@@ -117,10 +137,10 @@ class PitchRange:
 
     def plot(self, current_size):
         series = [row for row in self.series(current_size) if row["size"] <= 128 or row["current"]]
-        limit = max(1, max(row["max"] for row in series)) * 1.1
+        limit = max(25.0, max(row["max"] for row in series)*1.1)
         # Normalized coordinates keep extremes and single-note ranges in bounds.
         for row in series:
-            row["points"] = tuple((i/max(1, self.end-self.start), .5-error/(2*limit))
+            row["points"] = tuple((i/max(1, self.end-self.start), pitch_y(error, limit))
                                   for i, error in enumerate(row["errors"]))
         return series, limit
 
@@ -591,13 +611,11 @@ class App:
         for i, row in enumerate(self.pitch_range.series(self.settings.size)):
             label = f"{'*' if row['current'] else ' '} {row['size']:3}    {row['max']:6.1f} c    {row['avg']:6.1f} c"
             self.text(RIGHT_X+8, 114+i*12, label, row["color"])
-        self.text(RIGHT_X+8, 178, "GRAPH: 32 / 64 / 128 + EDITING SIZE", 6)
         series, limit = self.pitch_range.plot(self.settings.size)
+        self.text(RIGHT_X+8, 176, f"RANGE +/-{limit:.0f} c / GUIDE +/-10,25 c", 6)
+        self.text(RIGHT_X+8, 186, "GRAPH: 32 / 64 / 128 + EDITING SIZE", 6)
         x, y, w, h = PITCH_GRAPH
         ui_border(x, y, w, h, 5)
-        ui_line(x, y+h/2, x+w-1, y+h/2, 6)
-        for label, yy in [(f"+{limit:.0f}", y), ("0 c", y+h/2-4), (f"-{limit:.0f}", y+h-8)]:
-            self.text(RIGHT_X+4, yy, label, 6)
         for note in range(self.pitch_range.start, self.pitch_range.end+1):
             if note % 12 == 0:
                 xx = x+(note-self.pitch_range.start)*(w-1)/max(1, self.pitch_range.end-self.pitch_range.start)
@@ -605,6 +623,17 @@ class App:
                 # At wide ranges show alternating C labels to avoid collisions.
                 if self.pitch_range.end-self.pitch_range.start <= 72 or note % 24 == 0:
                     self.text(xx-4, y+h+2, note_name(note), 6)
+        for guide in pitch_guides(limit):
+            yy = y+guide["y"]
+            if abs(guide["cents"]) == 10:
+                for offset in range(0, w, 6):
+                    ui_line(x+offset, yy, x+min(offset+2, w-1), yy, guide["color"])
+            else:
+                ui_line(x, yy, x+w-1, yy, guide["color"])
+            top = y+guide["label_y"]
+            self.text(RIGHT_X+4, top, f"{guide['cents']:+d}" if guide["cents"] else "0", 6)
+            # Callouts keep all five labels legible even when lines cluster at 0.
+            ui_line(RIGHT_X+26, top+4, x-2, yy, guide["color"])
         for row in series:
             previous = None
             for px, py in row["points"]:

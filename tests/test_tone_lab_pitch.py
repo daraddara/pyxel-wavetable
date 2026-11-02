@@ -67,12 +67,45 @@ def test_range_aggregation_and_current_size():
 @pytest.mark.parametrize("start,end", [(0, 127), (72, 72), (127, 127), (48, 83)])
 def test_plot_coordinates_are_finite_and_bounded(start, end):
     series, limit = PitchRange(start, end).plot(512)
-    assert limit >= 1
+    assert limit >= 25
     assert series[-1]["current"]
     for row in series:
         assert len(row["points"]) == end-start+1
         assert all(0 <= x <= 1 and 0 <= y <= 1 for x, y in row["points"])
         assert row["points"][0][1] == pytest.approx(.5-row["errors"][0]/(2*limit))
+
+
+def test_minimum_and_expanding_vertical_range():
+    small, limit = PitchRange(36, 47).plot(128)
+    assert max(row["max"] for row in small) < 25
+    assert limit == 25
+    large, limit = PitchRange(72, 83).plot(128)
+    assert max(row["max"] for row in large) > 25
+    assert limit == pytest.approx(max(row["max"] for row in large)*1.1)
+
+
+@pytest.mark.parametrize("limit", [25, 40, 120, 3000])
+def test_fixed_guides_share_prediction_coordinates(limit):
+    guides = lab["pitch_guides"](limit)
+    height = lab["PITCH_GRAPH"][3]
+    assert [g["cents"] for g in guides] == [25, 10, 0, -10, -25]
+    for guide in guides:
+        assert guide["y"] == pytest.approx((.5-guide["cents"]/(2*limit))*(height-1))
+        assert 0 <= guide["y"] <= height-1
+        assert 0 <= guide["label_y"] <= height-8
+    assert guides[2]["y"] == (height-1)/2
+    assert guides[0]["y"]+guides[4]["y"] == pytest.approx(height-1)
+    assert guides[1]["y"]+guides[3]["y"] == pytest.approx(height-1)
+    assert all(b["label_y"]-a["label_y"] >= 10 for a, b in zip(guides, guides[1:]))
+
+
+@pytest.mark.parametrize("start,end", [(0, 127), (36, 36), (127, 127)])
+@pytest.mark.parametrize("size", [32, 128, 512])
+def test_reference_guides_stay_in_range(start, end, size):
+    series, limit = PitchRange(start, end).plot(size)
+    height = lab["PITCH_GRAPH"][3]
+    assert all(0 <= g["y"] <= height-1 for g in lab["pitch_guides"](limit))
+    assert all(0 <= py <= 1 for row in series for px, py in row["points"])
 
 
 @pytest.mark.parametrize("note", [-1, 128, 1.2, True, "C3", None])
