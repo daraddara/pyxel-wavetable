@@ -402,7 +402,7 @@ class App:
         pyxel.text(RIGHT_X+8, 146, self.settings.code(), 7)
         self.panel(MARGIN, 256, WIDTH-2*MARGIN, 28, "PREVIEW")
         pyxel.text(80, 266, self.preview.name.upper(), 10)
-        pyxel.text(176, 266, f"AUTO TONE: {'ON' if self.preview.auto_tone else 'OFF'}", 7)
+        pyxel.text(176, 266, f"Use Current Tone: {'ON' if self.preview.auto_tone else 'OFF'}", 7)
         pyxel.text(280, 266, f"LOOP: {'ON' if self.preview.loop else 'OFF'}", 7)
         pyxel.text(360, 266, "F5: PLAY / F6: STOP", 7)
 
@@ -436,7 +436,7 @@ class App:
         if self.editing:
             help_text = "MML: CTRL+A ALL / CTRL+C COPY / CTRL+V PASTE / BS/DEL ERASE\nENTER/F5: PLAY  F6: STOP  TAB/ESC: LEAVE EDITOR"
         else:
-            help_text = "UP/DOWN: FIELD  LEFT/RIGHT: VALUE  P: PREVIEW  A: AUTO TONE  L: LOOP\nSPACE: PLAY/STOP  F5: RESTART  S/F6: STOP  E/TAB: EDIT  ESC: QUIT"
+            help_text = "UP/DOWN: FIELD  LEFT/RIGHT: VALUE  P: PREVIEW  A: Use Current Tone  L: LOOP\nSPACE: PLAY/STOP  F5: RESTART  S/F6: STOP  E/TAB: EDIT  ESC: QUIT"
         pyxel.text(MARGIN, 362, help_text, 6)
 
 

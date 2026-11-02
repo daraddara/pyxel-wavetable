@@ -203,7 +203,7 @@ python examples/tone_lab.py
 | --- | --- |
 | パラメータの選択・増減 | ↑↓で項目選択、←→で変更 |
 | Preview切替 | P：melody → bass → short → custom。再生中は新しいPreviewを先頭から即再生、停止中は選択のみ |
-| 現在ToneをMML先頭に自動付加 | A：AUTO TONE ON/OFF |
+| 現在ToneをMML先頭に自動付加 | A：Use Current Tone ON/OFF |
 | ループ切替 | L |
 | 再生・停止 | SPACEで再生/停止をトグル。F5で先頭から再生、S / F6で停止 |
 | CUSTOM MML編集に入る | E / TAB |
@@ -238,7 +238,7 @@ COPY MMLは現在表示中のMML全文、COPY CODEは生成コード全文をOS�
 
 Pyxel Editorのコピー／貼り付けはアプリ内バッファを使いますが、Tone Labは外部とのテキスト交換が必要なため、example内だけで標準ライブラリの `tkinter` を利用します。新たなpip依存やライブラリ本体へのUI依存は追加していません。Tkがない環境やクリップボードを利用できない環境では、操作時に `CLIPBOARD ERROR` を表示し、MMLを保持します。Windowsでは実際のOSクリップボードでボタン処理経由のコピー・貼り付け・MML再生と、外部プロセスとの双方向のテキスト交換を確認しています。コピー内容はTone Labを開いたまま別アプリへ貼り付けてください。通常の文字入力は引き続きPyxelの `input_text` を使います。
 
-AUTO TONEは初期状態ONで、再生時に `@<編集中Toneのindex>` を先頭へ付けます。CUSTOM内に別の `@n` を書いた場合は、その位置から通常のPyxelの音色切替が有効です。OFFではMMLを変更せず渡します。空CUSTOMやMML構文エラーは画面に表示し、入力を保持します。修正して正常に再生するとエラー表示が消えます。
+Use Current Toneは初期状態ONで、再生時に `@<編集中Toneのindex>` を先頭へ付けます。CUSTOM内に別の `@n` を書いた場合は、その位置から通常のPyxelの音色切替が有効です。OFFではMMLを変更せず渡します。空CUSTOMやMML構文エラーは画面に表示し、入力を保持します。修正して正常に再生するとエラー表示が消えます。
 
 編集用Toneは起動時に1つだけ登録します。波形は設定変更時とPLAY時に同じスロットへ反映し、操作のたびにindexを増やしません。パラメータ変更で再生を再開せず、発音中の聞こえ方の変化はPyxel側の動作に任せます。タイミング管理・動的Envelope・独自MMLパーサは持ちません。波形表示はsample_bitsの整数レンジを振幅に変換した表示で、gain適用前の形状です。
 
