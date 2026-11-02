@@ -189,4 +189,57 @@ PoCでは、32/64点の複雑なPM波形に高周波的な粗さがあり、128�
 
 いずれもESCで終了します。メロディ比較では音色の切替時にフレーズの先頭から再生します。
 
+## Tone Lab：パラメータを調整して試聴する
+
+仮想環境を有効にしたターミナルで実行します。
+
+```powershell
+python examples/tone_lab.py
+```
+
+左側のTONEで設定を調整し、右側のWAVEFORMで1周期の形状、CODEでそのまま利用できる生成コードを確認できます。下側にはPREVIEW、MML入力欄、再生状態・エラーと操作説明を表示します。プリセット選択画面ではなく、generatorのパラメータを直接編集するツールです。
+
+| 操作（MML編集中を除く） | キー |
+| --- | --- |
+| パラメータの選択・増減 | ↑↓で項目選択、←→で変更 |
+| Preview切替 | P：melody → bass → short → custom。再生中は新しいPreviewを先頭から即再生、停止中は選択のみ |
+| 現在ToneをMML先頭に自動付加 | A：AUTO TONE ON/OFF |
+| ループ切替 | L |
+| 再生・停止 | SPACEで再生/停止をトグル。F5で先頭から再生、S / F6で停止 |
+| CUSTOM MML編集に入る | E / TAB |
+| 終了 | ESC（編集中は編集を終了するだけ） |
+
+対応generatorはPM / Harmonics / Pulse / Sine / Saw / Triangle / Squareです。初期値はPM、size=128、sample_bits=8、gain=0.5、ratio=3、index=1.8です。
+
+| パラメータ | UIでの範囲・刻み |
+| --- | --- |
+| size | 32 / 64 / 128 / 256 / 512 |
+| sample_bits | 1〜16、1刻み |
+| gain | 0〜1、0.05刻み |
+| PM ratio / index | ratio：整数1〜16、index：0〜10を0.1刻み |
+| Pulse duty | 1/32〜31/32、1/32刻み |
+| Harmonics H1〜H8 | 各0〜1、0.05刻み |
+
+これらはTone Labの操作範囲で、ライブラリの入力範囲を変更するものではありません。初期倍音は `[1, 0.5, 0.25, 0.1, 0, 0, 0, 0]` です。
+
+既定のPreviewは以下の3種類です。
+
+```text
+melody: T120 O3 L8 C D E G A G E D
+bass:   T110 O2 L8 C C G G A G E C
+short:  T120 O4 L16 C R C R C R C R
+```
+
+CUSTOM入力は `pyxel.input_text` を使う1行エディターです。ASCIIのMMLを入力でき、長い文字列はカーソルに合わせて横スクロールします。←→ / HOME / ENDで移動、Backspace / Deleteで削除、Ctrl+Aで全選択、Enter / F5で再生、F6で停止、TAB / ESCで編集を終了します。編集中の文字キーやSPACEは入力用で、Preview切替などのショートカットにはなりません。改行・タブが入力イベントに含まれる場合は空白へ変換します。
+
+MML欄に **COPY MML / PASTE MML**、読み取り専用のCODE欄に **COPY CODE** ボタンがあります。MML本文をクリックすると、その位置へカーソルを移動してCUSTOM編集に入ります。操作対象の欄は黄色い枠、STATUSには `FOCUS: MML` / `CODE` / `TONE` を表示します。
+
+COPY MMLは現在表示中のMML全文、COPY CODEは生成コード全文をOSクリップボードへコピーします。PASTE MMLは編集中ならカーソル位置へ挿入し、Ctrl+Aで全選択していれば置換します。未編集のPreviewから押した場合は、CUSTOMへ切り替えて貼り付けた内容を設定します。改行は空白へ変換します。Ctrl+C / Ctrl+Vも対象欄のフォーカスに従います。CODEは生成結果なのでPaste操作はありません。
+
+Pyxel Editorのコピー／貼り付けはアプリ内バッファを使いますが、Tone Labは外部とのテキスト交換が必要なため、example内だけで標準ライブラリの `tkinter` を利用します。新たなpip依存やライブラリ本体へのUI依存は追加していません。Tkがない環境やクリップボードを利用できない環境では、操作時に `CLIPBOARD ERROR` を表示し、MMLを保持します。Windowsでは実際のOSクリップボードでボタン処理経由のコピー・貼り付け・MML再生と、外部プロセスとの双方向のテキスト交換を確認しています。コピー内容はTone Labを開いたまま別アプリへ貼り付けてください。通常の文字入力は引き続きPyxelの `input_text` を使います。
+
+AUTO TONEは初期状態ONで、再生時に `@<編集中Toneのindex>` を先頭へ付けます。CUSTOM内に別の `@n` を書いた場合は、その位置から通常のPyxelの音色切替が有効です。OFFではMMLを変更せず渡します。空CUSTOMやMML構文エラーは画面に表示し、入力を保持します。修正して正常に再生するとエラー表示が消えます。
+
+編集用Toneは起動時に1つだけ登録します。波形は設定変更時とPLAY時に同じスロットへ反映し、操作のたびにindexを増やしません。パラメータ変更で再生を再開せず、発音中の聞こえ方の変化はPyxel側の動作に任せます。タイミング管理・動的Envelope・独自MMLパーサは持ちません。波形表示はsample_bitsの整数レンジを振幅に変換した表示で、gain適用前の形状です。
+
 設計境界は [docs/design.md](docs/design.md) を参照してください。PyxelのAPIは [公式APIリファレンス](https://kitao.github.io/pyxel/web/api-reference/) を参照しています。
