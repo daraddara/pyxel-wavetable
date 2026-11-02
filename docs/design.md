@@ -114,6 +114,6 @@ pytestはモックではなく実際の `pyxel.Tone` を使い、波形の値、
 - basic_tonesは90フレームで1〜5の選択・停止・再開、custom_waveは90フレームで停止・再開を確認。melody_compareは390フレームで停止・再開とSound 0〜4の巡回を確認。全例で生成後のwavetableに変更がないことを検証し、画面も確認。
 - 通常のMML（`T120 @4 V80 L8 O3 CDEG`）で生成Toneを指定し、play後に再生位置が得られることを確認。
 - 補助のPyxel MCP環境（Pyxel 2.9.5）でも画面とキー切替を確認。音声レンダリングはbasic_tones/custom_waveが各3秒、Music比較が13秒で成功し、非無音の出力を確認。FFT由来の推定音名は倍音に影響されるため、音程の正確性の判定には使っていない。
-- 主観的な試聴評価、Python 3.10〜3.12での実行、他OSでの実行は未実施。
+- 主観的な試聴評価、他OSでの実行は未実施。GitHub ActionsではPython 3.11〜3.13を継続確認する。
 
 ローカル検証環境は `.venv` に作成し、既存のインストール済み依存を `--system-site-packages` で利用した。Windows sandboxの一時ディレクトリへの書込み制約を避けるため、作業中だけTEMP/TMPを `.venv/tmp` に設定した。配布ライブラリにはこの設定や検証用ハーネスを含めない。
