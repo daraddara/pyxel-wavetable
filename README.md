@@ -15,6 +15,7 @@
 - Tone登録用 `add_tone()` / `add_tones()`
 - 音作りの出発点になる10種類のPreset
 - パラメータを調整しながら試聴できる Tone Lab
+- 実験ブランチ限定のBGM Compare（公開examplesへの採用は未決定）
 
 ## Requirements
 
@@ -170,6 +171,7 @@ python examples/melody_compare.py
 python examples/custom_wave.py
 python examples/percussion_presets.py
 python examples/tone_lab.py
+python examples/bgm_compare.py
 ```
 
 - `basic_tones.py`: 基本generatorの音色比較
@@ -177,6 +179,7 @@ python examples/tone_lab.py
 - `custom_wave.py`: 任意関数からToneを生成
 - `percussion_presets.py`: パーカッションPreset + MML Envelope
 - `tone_lab.py`: パラメータ編集・MML試聴・コード出力
+- `bgm_compare.py`: `gen_bgm()` の曲をAで標準音、Bでwavetable音へ切り替えて比較。曲調・編成・seedを変更可能。詳細は [BGM Compare](docs/bgm-compare.md) を参照してください。
 
 ## Notes and limitations
 
