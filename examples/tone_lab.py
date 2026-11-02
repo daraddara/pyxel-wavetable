@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from math import floor, log2
 
 import pyxel
 import pyxel_wavetable as wt
@@ -29,6 +30,18 @@ MML_PASTE = (WIDTH-MARGIN-76, 336, 68, 12)
 PRESET_PREV = (260, 34, 24, 12)
 PRESET_NEXT = (292, 34, 24, 12)
 PRESET_LOAD = (324, 34, 64, 12)
+PITCH_TOGGLE = (WIDTH-116, 6, 108, 12)
+PITCH_CONTROLS = {
+    "start_down": (RIGHT_X+8, 84, 18, 12),
+    "start_up": (RIGHT_X+84, 84, 18, 12),
+    "end_down": (RIGHT_X+156, 84, 18, 12),
+    "end_up": (RIGHT_X+232, 84, 18, 12),
+}
+PITCH_GRAPH = (RIGHT_X+48, 194, DETAIL_W-64, 62)
+PITCH_COLORS = (11, 12, 10, 14, 9)
+# Verified against the 366 measurements in docs/wavetable-pitch.csv.
+# This is a Pyxel 2.9.9 prediction, not an audio measurement or correction.
+PITCH_CLOCK_HZ = 1_789_773
 UI_SCALE = 2
 FONT_SIZE = 16
 TEXT_LINE = 10  # Logical units; 20 physical pixels between text baselines.
@@ -45,6 +58,71 @@ def ui_border(x, y, w, h, color):
 
 def ui_line(x1, y1, x2, y2, color):
     pyxel.line(x1*UI_SCALE, y1*UI_SCALE, x2*UI_SCALE, y2*UI_SCALE, color)
+
+
+def note_frequency(note):
+    """MIDI convention: 60 = C4, 69 = A4; unrelated to Sound.set octaves."""
+    if type(note) is not int or not 0 <= note <= 127:
+        raise ValueError("note must be an integer MIDI note in 0..127")
+    return 440.0 * 2 ** ((note-69)/12)
+
+
+def note_name(note):
+    note_frequency(note)  # Validate the same domain as the model.
+    return ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")[note % 12] + str(note//12-1)
+
+
+def predict_pitch(note, size):
+    """Return target Hz, predicted Hz and signed cents; no Pyxel calls."""
+    target = note_frequency(note)
+    if type(size) is not int or size <= 0:
+        raise ValueError("size must be a positive integer")
+    # Positive values: Rust f64::round rounds halfway away from zero.
+    clocks = max(1, floor(PITCH_CLOCK_HZ/(size*target)+0.5))
+    actual = PITCH_CLOCK_HZ/(size*clocks)
+    return target, actual, 1200*log2(actual/target)
+
+
+def pitch_summary(start, end, size):
+    note_frequency(start)
+    note_frequency(end)
+    if start > end:
+        raise ValueError("range start must not exceed end")
+    errors = tuple(predict_pitch(note, size)[2] for note in range(start, end+1))
+    return {"size": size, "errors": errors, "max": max(map(abs, errors)),
+            "avg": sum(map(abs, errors))/len(errors)}
+
+
+@dataclass
+class PitchRange:
+    start: int = 48  # C3
+    end: int = 83  # B5
+
+    def __post_init__(self):
+        note_frequency(self.start)
+        note_frequency(self.end)
+        if self.start > self.end:
+            raise ValueError("range start must not exceed end")
+
+    def adjust(self, endpoint, direction):
+        if endpoint not in ("start", "end") or direction not in (-1, 1):
+            raise ValueError("expected start/end and direction -1/+1")
+        lower, upper = (0, self.end) if endpoint == "start" else (self.start, 127)
+        setattr(self, endpoint, max(lower, min(upper, getattr(self, endpoint)+direction)))
+
+    def series(self, current_size):
+        return [dict(pitch_summary(self.start, self.end, size),
+                     current=size == current_size, color=color)
+                for size, color in zip(SIZES, PITCH_COLORS)]
+
+    def plot(self, current_size):
+        series = [row for row in self.series(current_size) if row["size"] <= 128 or row["current"]]
+        limit = max(1, max(row["max"] for row in series)) * 1.1
+        # Normalized coordinates keep extremes and single-note ranges in bounds.
+        for row in series:
+            row["points"] = tuple((i/max(1, self.end-self.start), .5-error/(2*limit))
+                                  for i, error in enumerate(row["errors"]))
+        return series, limit
 
 
 class TextClipboard:
@@ -192,6 +270,8 @@ class App:
         self.char_width = self.font.text_width("M") / UI_SCALE
         pyxel.mouse(True)
         self.settings = ToneSettings()
+        self.pitch_range = PitchRange()
+        self.show_pitch = False
         self.preset_definitions = _preset_definitions()
         self.preset_cursor = 0
         self.preview = Preview()
@@ -304,13 +384,25 @@ class App:
         return x <= pyxel.mouse_x/UI_SCALE < x+w and y <= pyxel.mouse_y/UI_SCALE < y+h
 
     def mouse_click(self):
-        if self.inside(PRESET_PREV):
+        if self.inside(PITCH_TOGGLE):
+            self.show_pitch = not self.show_pitch
+            self.editing, self.selected_all = False, False
+            self.focus = "pitch" if self.show_pitch else "tone"
+        elif self.show_pitch and any(self.inside(rect) for rect in PITCH_CONTROLS.values()):
+            for action, rect in PITCH_CONTROLS.items():
+                if self.inside(rect):
+                    endpoint, direction = action.split("_")
+                    self.pitch_range.adjust(endpoint, -1 if direction == "down" else 1)
+            self.editing, self.selected_all, self.focus = False, False, "pitch"
+        elif self.show_pitch and self.inside((RIGHT_X, 64, DETAIL_W, 224)):
+            self.editing, self.selected_all, self.focus = False, False, "pitch"
+        elif self.inside(PRESET_PREV):
             self.browse_preset(-1)
         elif self.inside(PRESET_NEXT):
             self.browse_preset(1)
         elif self.inside(PRESET_LOAD):
             self.load_preset()
-        elif self.inside(CODE_COPY):
+        elif not self.show_pitch and self.inside(CODE_COPY):
             self.copy_text("code")
         elif self.inside(MML_COPY):
             self.copy_text("mml")
@@ -445,6 +537,7 @@ class App:
     def draw(self):
         pyxel.cls(1)
         self.text(MARGIN, 8, "TONE LAB / STATIC WAVETABLE EDITOR", 7)
+        self.button(PITCH_TOGGLE, "WAVE / CODE" if self.show_pitch else "PITCH ERROR")
         self.panel(MARGIN, 24, WIDTH-2*MARGIN, 32, "PRESET / [ ] BROWSE, ENTER LOAD")
         definition = self.preset_definitions[self.preset_cursor]
         self.text(MARGIN+8, 44, f"{definition.category.title()} / {definition.name.title()}", 7)
@@ -461,6 +554,13 @@ class App:
             self.text(MARGIN+105, y, self.settings.value(name), 10)
         self.text(MARGIN+8, 274, f"SLOT {self.tone_index} / ONE EDITABLE TONE", 6)
 
+        if self.show_pitch:
+            self.draw_pitch()
+        else:
+            self.draw_wave_code()
+        self.draw_preview()
+
+    def draw_wave_code(self):
         self.panel(RIGHT_X, 64, DETAIL_W, 96, "WAVEFORM / ONE CYCLE")
         tone = pyxel.tones[self.tone_index]
         values = list(tone.wavetable)
@@ -479,6 +579,43 @@ class App:
             ui_border(RIGHT_X, 168, DETAIL_W, 120, 10)
         self.button(CODE_COPY, "COPY CODE")
         self.text(RIGHT_X+8, 186, self.settings.code(), 7)
+
+    def draw_pitch(self):
+        self.panel(RIGHT_X, 64, DETAIL_W, 224, "PITCH ERROR / PYXEL 2.9.9 PREDICTION")
+        for action, rect in PITCH_CONTROLS.items():
+            self.button(rect, "-" if action.endswith("down") else "+")
+        self.text(RIGHT_X+32, 85, note_name(self.pitch_range.start), 7)
+        self.text(RIGHT_X+115, 85, "TO", 6)
+        self.text(RIGHT_X+180, 85, note_name(self.pitch_range.end), 7)
+        self.text(RIGHT_X+8, 102, "SIZE     MAX ABS     AVG ABS   (* EDITING)", 6)
+        for i, row in enumerate(self.pitch_range.series(self.settings.size)):
+            label = f"{'*' if row['current'] else ' '} {row['size']:3}    {row['max']:6.1f} c    {row['avg']:6.1f} c"
+            self.text(RIGHT_X+8, 114+i*12, label, row["color"])
+        self.text(RIGHT_X+8, 178, "GRAPH: 32 / 64 / 128 + EDITING SIZE", 6)
+        series, limit = self.pitch_range.plot(self.settings.size)
+        x, y, w, h = PITCH_GRAPH
+        ui_border(x, y, w, h, 5)
+        ui_line(x, y+h/2, x+w-1, y+h/2, 6)
+        for label, yy in [(f"+{limit:.0f}", y), ("0 c", y+h/2-4), (f"-{limit:.0f}", y+h-8)]:
+            self.text(RIGHT_X+4, yy, label, 6)
+        for note in range(self.pitch_range.start, self.pitch_range.end+1):
+            if note % 12 == 0:
+                xx = x+(note-self.pitch_range.start)*(w-1)/max(1, self.pitch_range.end-self.pitch_range.start)
+                ui_line(xx, y, xx, y+h-1, 5)
+                # At wide ranges show alternating C labels to avoid collisions.
+                if self.pitch_range.end-self.pitch_range.start <= 72 or note % 24 == 0:
+                    self.text(xx-4, y+h+2, note_name(note), 6)
+        for row in series:
+            previous = None
+            for px, py in row["points"]:
+                point = (x+px*(w-1), y+py*(h-1))
+                if previous is not None:
+                    ui_line(*previous, *point, row["color"])
+                ui_rect(*point, 1.5 if row["current"] else 1, 1.5 if row["current"] else 1, row["color"])
+                previous = point
+        self.text(RIGHT_X+8, 276, "MODEL ONLY / NO AUDIO / NO CORRECTION", 6)
+
+    def draw_preview(self):
         self.panel(MARGIN, 296, WIDTH-2*MARGIN, 28, "PREVIEW")
         self.text(80, 306, self.preview.name.upper(), 10)
         self.text(176, 306, f"Use Current Tone: {'ON' if self.preview.auto_tone else 'OFF'}", 7)

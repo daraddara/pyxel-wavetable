@@ -96,6 +96,8 @@ def test_parameter_steps_and_limits():
 def editor():
     app = lab["App"].__new__(lab["App"])
     app.settings = ToneSettings()
+    app.pitch_range = lab["PitchRange"]()
+    app.show_pitch = False
     app.preset_definitions = lab["_preset_definitions"]()
     app.preset_cursor = 0
     app.preview = Preview()

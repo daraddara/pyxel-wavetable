@@ -197,6 +197,8 @@ Pyxel 2.9.9では、サンプルの再生時間が整数クロックへ丸めら
 
 ピッチ精度が重要なら、実際に使う音域・楽曲で32 / 64 / 128点などを比較して選んでください。短いwavetableは一般にピッチ誤差を抑えやすい一方、複雑なPMや高次倍音を含む波形では再現性とのトレードオフがあります。ライブラリは自動ピッチ補正を行わず、用途に応じたsizeの選択を利用者へ委ねます。実測と選び方は [Wavetable長とピッチ誤差](docs/wavetable-pitch.md)、制約と残る検証課題は [技術課題](docs/technical-issues.md) を参照してください。
 
+Tone LabのPitch Error表示では、指定音域に対するsize別の予測ピッチ誤差を、音を鳴らさず数値とグラフで確認できます。使い方は [Tone Lab Manual](docs/tone-lab.md#pitch-error音を鳴らさずsizeを比較する) を参照してください。
+
 正規化・量子化・デフォルト値の背景・責務境界などの詳細は [Design](docs/design.md) を参照してください。
 
 ## License
