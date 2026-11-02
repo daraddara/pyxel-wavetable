@@ -193,6 +193,10 @@ python examples/tone_lab.py
 
 `DEFAULT_SIZE=128`、`DEFAULT_SAMPLE_BITS=8`、`DEFAULT_GAIN=0.5` はこのプロジェクトの初期方針であり、Pyxel本体の推奨値ではありません。
 
+128点は全音域でピッチ誤差が小さいことを保証する値ではありません。Pyxel 2.9.9ではwavetable長と音程によってクロックの丸め誤差が変わり、高音域では目立つ場合があります。既定値の背景と音域別の実測は [Wavetable長とピッチ誤差](docs/wavetable-pitch.md) を参照してください。
+
+既定値・対応音域・音声品質の検証について、現在の課題と対処範囲を [技術課題](docs/technical-issues.md) に整理しています。
+
 正規化・量子化・デフォルト値の背景・責務境界などの詳細は [Design](docs/design.md) を参照してください。
 
 ## License
